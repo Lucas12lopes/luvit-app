@@ -18,28 +18,45 @@
   <main>
     <h2>Suas entregas de hoje</h2>
     <p id="contador">0 entregas adicionadas</p>
-    <button id="btnLimpar">🗑 Limpar dia</button>
-    <button id="btnModoMotoboy">🛵 Modo Motoboy</button>
 
-    <div class="input-area">
-      <input type="text" id="enderecoInput" placeholder="Digite o endereço...">
-      <button id="btnAdicionar">+ Adicionar</button>
+    <div class="top-btns">
+      <button id="btnLimpar">🗑 Limpar dia</button>
+      <button id="btnModoMotoboy">🛵 Modo Motoboy</button>
     </div>
 
+    <!-- Input com autocomplete -->
+    <div class="input-wrapper">
+      <div class="input-area">
+        <input type="text" id="enderecoInput" placeholder="Digite o endereço..." autocomplete="off">
+        <button id="btnAdicionar">+ Adicionar</button>
+      </div>
+      <div id="sugestoes" class="sugestoes-box" style="display:none"></div>
+    </div>
+
+    <!-- Favoritos -->
+    <section id="favoritosSection" style="display:none">
+      <div class="section-header">★ Favoritos</div>
+      <div id="favoritosLista"></div>
+    </section>
+
+    <!-- Lista de entregas -->
     <ul id="listaEntregas">
       <li class="vazio">Nenhuma entrega adicionada ainda.</li>
     </ul>
+
+    <!-- Histórico -->
+    <section id="historicoSection" style="display:none">
+      <div class="section-header">📋 Histórico recente</div>
+      <div id="historicoLista"></div>
+    </section>
   </main>
 
   <div class="modal-overlay" id="modalOverlay">
     <div class="modal">
       <h3>🛵 Modo Motoboy</h3>
-      <p style="color:#555; font-size:13px; margin-bottom:16px;">Otimizando sua rota...</p>
+      <p style="color:#555; font-size:13px; margin-bottom:16px;">Rota otimizada por proximidade</p>
       <div id="listaOrdenada"></div>
-      <div class="modal-btns">
-        <button class="btn-iniciar-waze" id="btnIniciarWaze">🗺 Iniciar no Waze</button>
-        <button class="btn-iniciar-maps" id="btnIniciarMaps">📍 Google Maps</button>
-      </div>
+      <div class="modal-btns"></div>
       <button class="btn-fechar-modal" id="btnFecharModal">Cancelar</button>
     </div>
   </div>

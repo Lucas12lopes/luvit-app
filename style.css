@@ -37,23 +37,68 @@ header p {
 
 main {
   padding: 24px;
+  max-width: 700px;
+  margin: 0 auto;
 }
 
 main h2 {
   font-size: 18px;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
   color: #fff;
 }
 
-main p {
+#contador {
+  font-size: 13px;
+  color: #FF5C00;
+  margin-bottom: 14px;
+  font-weight: 700;
+}
+
+/* ── Botões do topo ── */
+.top-btns {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+#btnLimpar {
+  padding: 8px 16px;
+  background: transparent;
+  border: 1px solid #333;
   color: #555;
-  font-size: 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+}
+#btnLimpar:hover {
+  border-color: #ff4444;
+  color: #ff4444;
+}
+
+#btnModoMotoboy {
+  padding: 8px 18px;
+  background: #FF5C00;
+  border: none;
+  color: #fff;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+}
+#btnModoMotoboy:hover {
+  background: #e05200;
+}
+
+/* ── Input + Autocomplete ── */
+.input-wrapper {
+  position: relative;
+  margin-bottom: 20px;
 }
 
 .input-area {
   display: flex;
   gap: 10px;
-  margin-bottom: 24px;
 }
 
 .input-area input {
@@ -65,8 +110,8 @@ main p {
   color: #fff;
   font-size: 16px;
   outline: none;
+  transition: border-color .2s;
 }
-
 .input-area input:focus {
   border-color: #FF5C00;
 }
@@ -77,129 +122,221 @@ main p {
   color: #fff;
   border: none;
   border-radius: 8px;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 700;
   cursor: pointer;
+  white-space: nowrap;
 }
-
 .input-area button:hover {
   background: #e05200;
 }
 
+.sugestoes-box {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 80px;
+  background: #1e1e1e;
+  border: 1px solid #333;
+  border-radius: 8px;
+  z-index: 50;
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(0,0,0,.5);
+}
+
+.sugestao-item {
+  padding: 10px 14px;
+  font-size: 14px;
+  color: #ddd;
+  cursor: pointer;
+  border-bottom: 1px solid #2a2a2a;
+  transition: background .15s;
+}
+.sugestao-item:last-child {
+  border-bottom: none;
+}
+.sugestao-item:hover {
+  background: #2a2a2a;
+  color: #FF5C00;
+}
+
+/* ── Seções (favoritos / histórico) ── */
+.section-header {
+  font-size: 13px;
+  font-weight: 700;
+  color: #555;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+  margin-top: 24px;
+}
+
+/* ── Favoritos ── */
+.fav-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: #1a1a1a;
+  border: 1px solid #2a2a2a;
+  border-radius: 8px;
+  margin-bottom: 6px;
+  font-size: 13px;
+  color: #FFD700;
+}
+
+.fav-add {
+  padding: 4px 12px;
+  background: transparent;
+  border: 1px solid #FF5C00;
+  color: #FF5C00;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.fav-add:hover {
+  background: #FF5C00;
+  color: #fff;
+}
+
+/* ── Histórico ── */
+.hist-dia {
+  background: #1a1a1a;
+  border: 1px solid #2a2a2a;
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-bottom: 8px;
+}
+
+.hist-header {
+  font-size: 12px;
+  color: #666;
+  margin-bottom: 8px;
+}
+
+.hist-enderecos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.hist-end {
+  background: #222;
+  border: 1px solid #333;
+  border-radius: 4px;
+  padding: 3px 8px;
+  font-size: 12px;
+  color: #aaa;
+}
+
+/* ── Lista de entregas ── */
 #listaEntregas {
   list-style: none;
+  margin-top: 4px;
 }
 
 .vazio {
   color: #555;
   font-size: 14px;
+  padding: 8px 0;
 }
+
 .item-entrega {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 14px 16px;
+  gap: 8px;
+  padding: 12px 14px;
   background: #1a1a1a;
   border-radius: 8px;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
   border: 1px solid #2a2a2a;
 }
 
 .item-entrega span {
   flex: 1;
-  font-size: 15px;
+  font-size: 14px;
 }
 
-.btn-concluido {
-  padding: 6px 12px;
+.btn-favorito {
   background: transparent;
-  border: 1px solid #FF5C00;
-  color: #FF5C00;
-  border-radius: 6px;
+  border: none;
+  color: #444;
+  font-size: 18px;
   cursor: pointer;
-  font-size: 13px;
-  font-weight: 700;
+  padding: 0 4px;
+  line-height: 1;
+  transition: color .2s, transform .2s;
+}
+.btn-favorito.ativo {
+  color: #FFD700;
+}
+.btn-favorito:hover {
+  color: #FFD700;
+  transform: scale(1.2);
 }
 
-.btn-remover {
-  padding: 6px 10px;
-  background: transparent;
-  border: 1px solid #444;
-  color: #888;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 13px;
-}
-
-.concluido span {
-  text-decoration: line-through;
-  color: #555;
-}
-
-.concluido .btn-concluido {
-  background: #FF5C00;
-  color: #fff;
-}
 .btn-waze {
-  padding: 6px 12px;
+  padding: 5px 10px;
   background: #05C8F7;
   border: none;
   color: #000;
   border-radius: 6px;
   cursor: pointer;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
+  white-space: nowrap;
 }
-#contador {
-  font-size: 13px;
-  color: #FF5C00;
-  margin-bottom: 16px;
-  font-weight: 700;
-}
-#btnLimpar {
-  padding: 6px 14px;
+
+.btn-concluido {
+  padding: 5px 10px;
   background: transparent;
-  border: 1px solid #333;
-  color: #555;
+  border: 1px solid #FF5C00;
+  color: #FF5C00;
   border-radius: 6px;
   cursor: pointer;
   font-size: 12px;
-  margin-bottom: 16px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.btn-concluido:disabled {
+  background: #FF5C00;
+  color: #fff;
+  cursor: default;
 }
 
-#btnLimpar:hover {
+.btn-remover {
+  padding: 5px 8px;
+  background: transparent;
+  border: 1px solid #333;
+  color: #666;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all .2s;
+}
+.btn-remover:hover {
   border-color: #ff4444;
   color: #ff4444;
 }
-#btnModoMotoboy {
-  padding: 8px 16px;
-  background: #FF5C00;
-  border: none;
-  color: #fff;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 13px;
-  font-weight: 700;
-  margin-left: 8px;
+
+.concluido span {
+  text-decoration: line-through;
+  color: #444;
 }
 
-#btnModoMotoboy:hover {
-  background: #e05200;
-}
-
+/* ── Modal ── */
 .modal-overlay {
   display: none;
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
   background: rgba(0,0,0,0.85);
   z-index: 100;
   justify-content: center;
   align-items: center;
 }
-
 .modal-overlay.ativo {
   display: flex;
 }
@@ -209,13 +346,15 @@ main p {
   border-radius: 16px;
   padding: 24px;
   width: 90%;
-  max-width: 400px;
+  max-width: 420px;
   border: 1px solid #333;
+  max-height: 90vh;
+  overflow-y: auto;
 }
 
 .modal h3 {
   color: #FF5C00;
-  margin-bottom: 16px;
+  margin-bottom: 4px;
   font-size: 18px;
 }
 
@@ -223,10 +362,10 @@ main p {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px;
+  padding: 10px 12px;
   background: #222;
   border-radius: 8px;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
   color: #fff;
   font-size: 14px;
 }
@@ -234,8 +373,7 @@ main p {
 .modal-item .numero {
   background: #FF5C00;
   color: #fff;
-  width: 24px;
-  height: 24px;
+  width: 24px; height: 24px;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -285,40 +423,72 @@ main p {
   cursor: pointer;
   font-size: 13px;
   margin-top: 8px;
+  transition: all .2s;
 }
-/* botão concluir entrega */
-.item-entrega button:nth-child(2) {
-  background: #00c853;
-  color: white;
-  border: none;
-  padding: 10px 14px;
+.btn-fechar-modal:hover {
+  border-color: #ff4444;
+  color: #ff4444;
+}
+
+/* ── Paradas do modal ── */
+.modal-item.parada-concluida {
+  opacity: 0.4;
+}
+.modal-item.parada-concluida .numero {
+  background: #333;
   font-size: 14px;
-  border-radius: 8px;
-  margin-left: 8px;
-  cursor: pointer;
-  font-weight: bold;
-  transition: 0.2s;
+}
+.modal-item.parada-atual {
+  border: 1px solid #FF5C00;
+  background: #1f0e00;
+}
+.modal-item.parada-atual .numero {
+  animation: pulse 1.2s infinite;
+}
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.15); }
 }
 
-/* efeito ao clicar */
-.item-entrega button:nth-child(2):active {
-  transform: scale(0.95);
+.badge-atual {
+  background: #FF5C00;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 20px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
-/* quando concluído */
-.item-entrega.concluido {
-  opacity: 0.6;
-  text-decoration: line-through;
-}
-
-/* botão remover */
-.item-entrega button:nth-child(3) {
-  background: #ff3b30;
-  color: white;
+.btn-proxima-parada {
+  flex: 1;
+  padding: 14px;
+  background: #FF5C00;
   border: none;
-  padding: 8px 10px;
-  font-size: 13px;
+  color: #fff;
   border-radius: 8px;
-  margin-left: 6px;
   cursor: pointer;
+  font-weight: 700;
+  font-size: 15px;
+  transition: background .2s;
+}
+.btn-proxima-parada:hover:not(:disabled) {
+  background: #e05200;
+}
+.btn-proxima-parada:disabled {
+  background: #333;
+  color: #666;
+  cursor: default;
+}
+
+/* ── Mobile ── */
+@media (max-width: 480px) {
+  .item-entrega {
+    flex-wrap: wrap;
+  }
+  .item-entrega span {
+    width: 100%;
+    order: -1;
+  }
 }
