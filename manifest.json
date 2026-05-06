@@ -1,0 +1,9 @@
+{
+  "name": "Luvit",
+  "short_name": "Luvit",
+  "description": "Rotas inteligentes para motoboys",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#111111",
+  "theme_color": "#FF5C00"
+}

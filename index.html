@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Luvit</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#FF5C00">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <header>
+    <h1>LU<span>VI</span>T</h1>
+    <p>L • H • V</p>
+  </header>
+
+  <main>
+    <h2>Suas entregas de hoje</h2>
+    <p id="contador">0 entregas adicionadas</p>
+    <button id="btnLimpar">🗑 Limpar dia</button>
+    <button id="btnModoMotoboy">🛵 Modo Motoboy</button>
+
+    <div class="input-area">
+      <input type="text" id="enderecoInput" placeholder="Digite o endereço...">
+      <button id="btnAdicionar">+ Adicionar</button>
+    </div>
+
+    <ul id="listaEntregas">
+      <li class="vazio">Nenhuma entrega adicionada ainda.</li>
+    </ul>
+  </main>
+
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal">
+      <h3>🛵 Modo Motoboy</h3>
+      <p style="color:#555; font-size:13px; margin-bottom:16px;">Otimizando sua rota...</p>
+      <div id="listaOrdenada"></div>
+      <div class="modal-btns">
+        <button class="btn-iniciar-waze" id="btnIniciarWaze">🗺 Iniciar no Waze</button>
+        <button class="btn-iniciar-maps" id="btnIniciarMaps">📍 Google Maps</button>
+      </div>
+      <button class="btn-fechar-modal" id="btnFecharModal">Cancelar</button>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
