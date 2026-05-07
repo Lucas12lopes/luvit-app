@@ -1,24 +1,21 @@
-const CACHE = 'luvit-v1'
-const arquivos = [
+const CACHE_NAME = 'luvit-v1';
+const ASSETS = [
   '/',
   '/index.html',
   '/style.css',
   '/app.js',
-  '/manifest.json'
-]
+  'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
+  'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
+];
 
-self.addEventListener('install', function(e) {
-  e.waitUntil(
-    caches.open(CACHE).then(function(cache) {
-      return cache.addAll(arquivos)
-    })
-  )
-})
+self.addEventListener('install', e => {
+  e.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS)));
+});
 
-self.addEventListener('fetch', function(e) {
-  e.respondWith(
-    caches.match(e.request).then(function(resposta) {
-      return resposta || fetch(e.request)
-    })
-  )
-})
+self.addEventListener('fetch', e => {
+  // Ignora requisições de API (deixa o navegador buscar direto)
+  if (e.request.url.includes('photon.komoot.io') || e.request.url.includes('openstreetmap')) {
+    return;
+  }
+  e.respondWith(caches.match(e.request).then(res => res || fetch(e.request)));
+});

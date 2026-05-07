@@ -1,101 +1,62 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Luvit</title>
-  <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#FF5C00">
-  <link rel="icon" href="favicon.png" type="image/png">
-  <link rel="apple-touch-icon" href="icon-192x192.png">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-  <link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Luvit Pro - Rota Real</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <header>
+        <h1>LU<span>VI</span>T</h1>
+        <div id="labelCidade" class="label-cidade">📍 São José dos Pinhais</div>
+    </header>
 
-  <header>
-    <h1>LU<span>VI</span>T</h1>
-    <p>L • H • V</p>
-  </header>
+    <nav class="abas">
+        <button class="aba ativa" data-aba="entregas">📦 ENTREGAS</button>
+        <button class="aba" data-aba="favoritos">★ FAVORITOS</button>
+    </nav>
 
-  <!-- Cidade detectada -->
-  <div id="labelCidade" class="label-cidade">📍 Detectando localização...</div>
+    <main>
+        <section id="aba-entregas" class="aba-content ativa">
+            <div class="topo-entregas">
+                <p id="contador">0 entregas</p>
+                <div class="topo-btns">
+                    <button id="btnLimpar">🗑 Limpar</button>
+                    <button id="btnOtimizar">⚡ Otimizar Rota</button>
+                </div>
+            </div>
+            <div class="input-wrapper">
+                <div class="input-area">
+                    <input type="text" id="enderecoInput" placeholder="Rua e número..." autocomplete="off">
+                    <button id="btnAdicionar">+ Add</button>
+                </div>
+                <div id="sugestoes" class="sugestoes-box" style="display:none"></div>
+            </div>
+            <ul id="listaEntregas"></ul>
+        </section>
 
-  <!-- Abas -->
-  <nav class="abas">
-    <button class="aba ativa" data-aba="entregas">📦 Entregas</button>
-    <button class="aba" data-aba="favoritos">★ Favoritos</button>
-    <button class="aba" data-aba="historico">📋 Histórico</button>
-  </nav>
+        <section id="aba-favoritos" class="aba-content">
+            <ul id="listaFavoritos"></ul>
+        </section>
+    </main>
 
-  <main>
-
-    <!-- ===== ABA ENTREGAS ===== -->
-    <section id="aba-entregas" class="aba-content ativa">
-      <div class="topo-entregas">
-        <p id="contador">0 entregas adicionadas</p>
-        <div class="topo-btns">
-          <button id="btnLimpar">🗑 Limpar dia</button>
-          <button id="btnOtimizar">🗺 Otimizar Rota</button>
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="modalTitulo">📍 Trajeto Real</h3>
+                <button id="btnFecharModal" class="btn-fechar-x">✕</button>
+            </div>
+            <div id="infoRota" class="info-rota-topo"></div>
+            <div id="mapContainer"></div>
+            <div id="controleNavegacao"></div> 
+            <div class="modal-btns" id="modalBtns"></div>
+            <button id="btnCancelarModal" class="btn-voltar">Voltar à lista</button>
         </div>
-      </div>
-
-      <div class="input-wrapper">
-        <div class="input-area">
-          <input type="text" id="enderecoInput" placeholder="Ex: Rua Cascavel, 80" autocomplete="off">
-          <button id="btnAdicionar">+ Adicionar</button>
-        </div>
-        <div id="sugestoes" class="sugestoes-box" style="display:none"></div>
-      </div>
-
-      <ul id="listaEntregas">
-        <li class="vazio">Nenhuma entrega adicionada ainda.</li>
-      </ul>
-    </section>
-
-    <!-- ===== ABA FAVORITOS ===== -->
-    <section id="aba-favoritos" class="aba-content">
-      <div id="favoritosVazio" class="estado-vazio">
-        <div class="vazio-icon">★</div>
-        <p>Nenhum favorito ainda.</p>
-        <span>Toque na estrela ★ em qualquer endereço para salvar.</span>
-      </div>
-      <div id="favoritosLista"></div>
-    </section>
-
-    <!-- ===== ABA HISTÓRICO ===== -->
-    <section id="aba-historico" class="aba-content">
-      <div id="historicoVazio" class="estado-vazio">
-        <div class="vazio-icon">📋</div>
-        <p>Nenhuma rota otimizada ainda.</p>
-        <span>O histórico aparece após usar "Otimizar Rota".</span>
-      </div>
-      <div id="historicoLista"></div>
-    </section>
-
-  </main>
-
-  <!-- ===== MODAL ROTA / MAPA ===== -->
-  <div class="modal-overlay" id="modalOverlay">
-    <div class="modal">
-
-      <!-- Tela 1: Lista ordenada -->
-      <div id="telaLista">
-        <div class="modal-header">
-          <h3>🗺 Rota Otimizada</h3>
-          <button class="btn-fechar-x" id="btnFecharModal">✕</button>
-        </div>
-        <p class="modal-sub">Ordem sugerida a partir da sua localização</p>
-        <div id="listaOrdenada"></div>
-        <div id="mapContainer"></div>
-        <div class="modal-btns" id="modalBtns"></div>
-        <button class="btn-fechar-modal" id="btnCancelarModal">Cancelar</button>
-      </div>
-
     </div>
-  </div>
 
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="app.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="app.js"></script>
 </body>
 </html>

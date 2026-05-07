@@ -1,663 +1,171 @@
-/* =====================================================
-   LUVIT — app.js
-   Geocodificação: Nominatim (OpenStreetMap)
-   Mapa: Leaflet.js + OpenStreetMap
-   100% gratuito, sem API key
-   ===================================================== */
+document.addEventListener('DOMContentLoaded', () => {
+    const input = document.getElementById('enderecoInput');
+    const lista = document.getElementById('listaEntregas');
+    const listaFavs = document.getElementById('listaFavoritos');
+    const sugestoesBox = document.getElementById('sugestoes');
+    const btnOtimizar = document.getElementById('btnOtimizar');
+    const modalOverlay = document.getElementById('modalOverlay');
 
-const input        = document.getElementById('enderecoInput')
-const btnAdicionar = document.getElementById('btnAdicionar')
-const lista        = document.getElementById('listaEntregas')
-const contador     = document.getElementById('contador')
-const btnLimpar    = document.getElementById('btnLimpar')
-const btnOtimizar  = document.getElementById('btnOtimizar')
-const modalOverlay = document.getElementById('modalOverlay')
-const listaOrdenada= document.getElementById('listaOrdenada')
-const btnFecharModal  = document.getElementById('btnFecharModal')
-const btnCancelarModal= document.getElementById('btnCancelarModal')
-const modalBtns    = document.getElementById('modalBtns')
-const sugestoesBox = document.getElementById('sugestoes')
+    let locAtual = { lat: -25.534, lon: -49.184 }; 
+    let entregas = [];
+    let favoritos = JSON.parse(localStorage.getItem('luvit_favoritos')) || [];
+    let mapa = null;
+    let delay;
 
-let rotaOrdenada = []
-let modoAtivo    = false
-let paradaAtual  = 0
-let appNavegador = null
-let mapaLeaflet  = null
+    // --- AUTOCOMPLETE COM NÚMERO ---
+    input.addEventListener('input', () => {
+        clearTimeout(delay);
+        if (input.value.length < 3) return sugestoesBox.style.display = 'none';
+        delay = setTimeout(async () => {
+            try {
+                const bbox = "-49.40,-25.65,-49.00,-25.35"; 
+                const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(input.value)}&limit=10&lat=${locAtual.lat}&lon=${locAtual.lon}&location_bias_scale=15&bbox=${bbox}`;
+                const r = await fetch(url);
+                const d = await r.json();
+                sugestoesBox.innerHTML = d.features.map(f => {
+                    const p = f.properties;
+                    const rua = p.name || p.street || "Rua";
+                    const num = p.housenumber ? `, ${p.housenumber}` : ""; 
+                    const bairro = p.district || p.suburb || "SJP";
+                    const completa = `${rua}${num} - ${bairro}`;
+                    return `<div class="sugestao-item" onclick="window.selecionarSugestao('${completa.replace(/'/g, "\\")}')">
+                        <strong style="color:#FF5C00">📍 ${rua}${num}</strong><br><small style="color:#888">${bairro}</small>
+                    </div>`;
+                }).join('');
+                sugestoesBox.style.display = 'block';
+            } catch(e) { console.error(e); }
+        }, 400);
+    });
 
-// Cidade detectada automaticamente pelo GPS
-let CIDADE = ''
-let cidadeDetectada = false
+    window.selecionarSugestao = (t) => { input.value = t; sugestoesBox.style.display = 'none'; addEntrega(); };
 
-/* =====================================================
-   DETECÇÃO AUTOMÁTICA DE CIDADE VIA GPS
-   ===================================================== */
-async function detectarCidade() {
-  const labelCidade = document.getElementById('labelCidade')
-
-  // Cache do dia — evita gastar req toda vez
-  const cache = localStorage.getItem('luvit-cidade-cache')
-  if (cache) {
-    const { cidade, data } = JSON.parse(cache)
-    const hoje = new Date().toLocaleDateString('pt-BR')
-    if (data === hoje) {
-      CIDADE = cidade
-      cidadeDetectada = true
-      if (labelCidade) labelCidade.textContent = '📍 ' + cidade.split(',')[0]
-      return
+    function addEntrega() {
+        const v = input.value.trim();
+        if (v && !entregas.includes(v)) {
+            entregas.push(v);
+            input.value = '';
+            renderListas();
+        }
     }
-  }
 
-  if (!navigator.geolocation) {
-    if (labelCidade) labelCidade.textContent = '⚠️ GPS indisponível'
-    return
-  }
+    // --- FAVORITOS (CORRIGIDO) ---
+    window.toggleFav = (e) => {
+        const i = favoritos.indexOf(e);
+        if (i > -1) favoritos.splice(i, 1); else favoritos.push(e);
+        localStorage.setItem('luvit_favoritos', JSON.stringify(favoritos));
+        renderListas();
+    };
 
-  try {
-    const pos = await new Promise((res, rej) =>
-      navigator.geolocation.getCurrentPosition(res, rej, { timeout: 6000 })
-    )
-    const { latitude: lat, longitude: lon } = pos.coords
+    window.usarFavorito = (e) => {
+        if (!entregas.includes(e)) {
+            entregas.push(e);
+            renderListas();
+            // Switch para aba de entregas para dar feedback visual
+            document.querySelector('[data-aba="entregas"]').click();
+        }
+    };
 
-    const resp = await fetch(
-      `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`,
-      { headers: { 'Accept-Language': 'pt-BR' } }
-    )
-    const data = await resp.json()
-    const a = data.address || {}
-
-    const municipio = a.city || a.town || a.village || a.county || ''
-    const estado = a.state || ''
-    CIDADE = [municipio, estado, 'Brasil'].filter(Boolean).join(', ')
-    cidadeDetectada = true
-
-    localStorage.setItem('luvit-cidade-cache', JSON.stringify({
-      cidade: CIDADE,
-      data: new Date().toLocaleDateString('pt-BR')
-    }))
-
-    if (labelCidade) labelCidade.textContent = '📍 ' + municipio
-  } catch (e) {
-    if (labelCidade) labelCidade.textContent = '⚠️ Localização não detectada'
-    console.warn('Cidade não detectada:', e)
-  }
-}
-
-function getCidade() {
-  return CIDADE || 'Brasil'
-}
-
-/* =====================================================
-   ABAS
-   ===================================================== */
-document.querySelectorAll('.aba').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.aba').forEach(b => b.classList.remove('ativa'))
-    document.querySelectorAll('.aba-content').forEach(s => s.classList.remove('ativa'))
-    btn.classList.add('ativa')
-    document.getElementById('aba-' + btn.dataset.aba).classList.add('ativa')
-  })
-})
-
-/* =====================================================
-   FAVORITOS
-   ===================================================== */
-function getFavoritos() {
-  return JSON.parse(localStorage.getItem('luvit-favoritos') || '[]')
-}
-function salvarFavoritos(favs) {
-  localStorage.setItem('luvit-favoritos', JSON.stringify(favs))
-}
-function isFavorito(end) { return getFavoritos().includes(end) }
-function toggleFavorito(end) {
-  let favs = getFavoritos()
-  favs = favs.includes(end) ? favs.filter(f => f !== end) : [end, ...favs].slice(0, 30)
-  salvarFavoritos(favs)
-}
-
-function renderFavoritos() {
-  const favs = getFavoritos()
-  const container = document.getElementById('favoritosLista')
-  const vazio = document.getElementById('favoritosVazio')
-  vazio.style.display = favs.length ? 'none' : 'block'
-  container.innerHTML = ''
-  favs.forEach(f => {
-    const div = document.createElement('div')
-    div.className = 'fav-item'
-    div.innerHTML = `
-      <div class="fav-nome">★ <span>${f}</span></div>
-      <button class="fav-add">+ Adicionar</button>
-      <button class="fav-del" title="Remover favorito">✕</button>
-    `
-    div.querySelector('.fav-add').addEventListener('click', () => {
-      input.value = f
-      adicionarEndereco()
-      // muda pra aba entregas
-      document.querySelector('[data-aba="entregas"]').click()
-    })
-    div.querySelector('.fav-del').addEventListener('click', () => {
-      toggleFavorito(f)
-      renderFavoritos()
-      renderListaComFavoritos()
-    })
-    container.appendChild(div)
-  })
-}
-
-/* =====================================================
-   HISTÓRICO — só data + quantidade
-   ===================================================== */
-function getHistorico() {
-  return JSON.parse(localStorage.getItem('luvit-historico') || '[]')
-}
-function registrarHistorico(quantidade) {
-  if (!quantidade) return
-  const hist = getHistorico()
-  const hoje = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
-  const hora = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
-  hist.unshift({ data: hoje, hora, quantidade })
-  if (hist.length > 60) hist.pop()
-  localStorage.setItem('luvit-historico', JSON.stringify(hist))
-}
-
-function renderHistorico() {
-  const hist = getHistorico()
-  const container = document.getElementById('historicoLista')
-  const vazio = document.getElementById('historicoVazio')
-  vazio.style.display = hist.length ? 'none' : 'block'
-  container.innerHTML = ''
-  hist.forEach(h => {
-    const div = document.createElement('div')
-    div.className = 'hist-item'
-    div.innerHTML = `
-      <span class="hist-data">📅 ${h.data} às ${h.hora}</span>
-      <span class="hist-qtd">${h.quantidade} entrega${h.quantidade !== 1 ? 's' : ''}</span>
-    `
-    container.appendChild(div)
-  })
-}
-
-/* =====================================================
-   GEOCODIFICAÇÃO — Nominatim
-   ===================================================== */
-function normalizarEndereco(e) {
-  return e.toLowerCase()
-    .replace(/r\./g, 'rua').replace(/av\./g, 'avenida')
-    .replace(/-/g, ' ').replace(/\s+/g, ' ').trim()
-}
-function salvarCacheGeo(end, lat, lon) {
-  localStorage.setItem('geo_' + end, JSON.stringify({ lat, lon }))
-}
-function buscarCacheGeo(end) {
-  const d = localStorage.getItem('geo_' + end)
-  return d ? JSON.parse(d) : null
-}
-
-async function geocodificarEndereco(endereco) {
-  const cache = buscarCacheGeo(endereco)
-  if (cache) return { endereco, lat: cache.lat, lon: cache.lon }
-
-  const base = normalizarEndereco(endereco)
-  const semNum = base.replace(/\d+/g, '').trim()
-  const tentativas = [
-    `${base}, ${getCidade()}`,
-    `${semNum}, ${getCidade()}`,
-    `${base}, Paraná, Brasil`,
-  ]
-
-  for (const t of tentativas) {
-    try {
-      const resp = await fetch(
-        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(t)}&format=json&limit=1`,
-        { headers: { 'Accept-Language': 'pt-BR' } }
-      )
-      const data = await resp.json()
-      if (data && data.length > 0) {
-        const lat = parseFloat(data[0].lat)
-        const lon = parseFloat(data[0].lon)
-        salvarCacheGeo(endereco, lat, lon)
-        return { endereco, lat, lon }
-      }
-    } catch (e) { console.warn('Geo falhou:', t) }
-  }
-  return null
-}
-
-/* =====================================================
-   AUTOCOMPLETE — debounce 600ms, respeita 1req/s
-   ===================================================== */
-let debounceTimer = null
-let ultimaReq = 0
-
-input.addEventListener('input', () => {
-  clearTimeout(debounceTimer)
-  const val = input.value.trim()
-  if (val.length < 4) { fecharSugestoes(); return }
-
-  debounceTimer = setTimeout(async () => {
-    const agora = Date.now()
-    if (agora - ultimaReq < 1100) return
-    ultimaReq = agora
-    try {
-      const resp = await fetch(
-        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(val + ', ' + getCidade())}&format=json&limit=5&addressdetails=1`,
-        { headers: { 'Accept-Language': 'pt-BR' } }
-      )
-      const data = await resp.json()
-      sugestoesBox.innerHTML = ''
-      if (!data.length) { fecharSugestoes(); return }
-      data.forEach(item => {
-        const a = item.address || {}
-        const partes = [a.road || a.pedestrian || '', a.house_number || '', a.suburb || a.neighbourhood || ''].filter(Boolean)
-        const label = partes.length ? partes.join(', ') : item.display_name.split(',').slice(0, 2).join(',').trim()
-        const div = document.createElement('div')
-        div.className = 'sugestao-item'
-        div.textContent = label
-        div.addEventListener('mousedown', () => {
-          input.value = label
-          fecharSugestoes()
-          input.focus()
-        })
-        sugestoesBox.appendChild(div)
-      })
-      sugestoesBox.style.display = 'block'
-    } catch (e) { fecharSugestoes() }
-  }, 600)
-})
-
-function fecharSugestoes() {
-  sugestoesBox.innerHTML = ''
-  sugestoesBox.style.display = 'none'
-}
-document.addEventListener('click', e => {
-  if (!e.target.closest('.input-wrapper')) fecharSugestoes()
-})
-
-/* =====================================================
-   DISTÂNCIA + ORDENAÇÃO
-   ===================================================== */
-function calcularDistancia(lat1, lon1, lat2, lon2) {
-  const R = 6371, toRad = v => v * Math.PI / 180
-  const dLat = toRad(lat2 - lat1), dLon = toRad(lon2 - lon1)
-  const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon/2)**2
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-}
-
-function ordenarPorDistancia(pontos, origem) {
-  const rest = [...pontos], ord = []
-  let atual = origem
-  while (rest.length > 0) {
-    let menor = Infinity, idx = 0
-    rest.forEach((p, i) => {
-      const d = calcularDistancia(atual.lat, atual.lon, p.lat, p.lon)
-      if (d < menor) { menor = d; idx = i }
-    })
-    const prox = rest.splice(idx, 1)[0]
-    ord.push(prox); atual = prox
-  }
-  return ord
-}
-
-/* =====================================================
-   LOCALIZAÇÃO
-   ===================================================== */
-async function obterLocalizacao() {
-  if (navigator.geolocation) {
-    try {
-      const pos = await new Promise((res, rej) =>
-        navigator.geolocation.getCurrentPosition(res, rej, { timeout: 5000 })
-      )
-      return { lat: pos.coords.latitude, lon: pos.coords.longitude }
-    } catch {}
-  }
-  return { lat: -25.53, lon: -49.2 } // fallback SJP
-}
-
-/* =====================================================
-   MAPA LEAFLET
-   ===================================================== */
-function iniciarMapa(pontos, origem) {
-  const container = document.getElementById('mapContainer')
-  container.innerHTML = '<div class="leaflet-map" id="leafletMap"></div>'
-
-  if (mapaLeaflet) { mapaLeaflet.remove(); mapaLeaflet = null }
-
-  mapaLeaflet = L.map('leafletMap', { zoomControl: true, attributionControl: false })
-
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 18
-  }).addTo(mapaLeaflet)
-
-  const bounds = []
-
-  // Pin de origem (localização atual)
-  const iconOrigem = L.divIcon({
-    html: '<div style="background:#333;color:#fff;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;border:2px solid #555">📍</div>',
-    className: '', iconAnchor: [14, 14]
-  })
-  L.marker([origem.lat, origem.lon], { icon: iconOrigem })
-    .addTo(mapaLeaflet)
-    .bindPopup('Você está aqui')
-  bounds.push([origem.lat, origem.lon])
-
-  // Linha da rota
-  const latlngs = [[origem.lat, origem.lon], ...pontos.map(p => [p.lat, p.lon])]
-  L.polyline(latlngs, { color: '#FF5C00', weight: 3, opacity: 0.8, dashArray: '8 6' }).addTo(mapaLeaflet)
-
-  // Pins numerados
-  pontos.forEach((p, i) => {
-    const iconPin = L.divIcon({
-      html: `<div style="background:#FF5C00;color:#fff;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.4)">${i + 1}</div>`,
-      className: '', iconAnchor: [14, 14]
-    })
-    L.marker([p.lat, p.lon], { icon: iconPin })
-      .addTo(mapaLeaflet)
-      .bindPopup(`<b>${i + 1}.</b> ${p.endereco}`)
-    bounds.push([p.lat, p.lon])
-  })
-
-  mapaLeaflet.fitBounds(bounds, { padding: [24, 24] })
-}
-
-/* =====================================================
-   MODAL — ROTA OTIMIZADA
-   ===================================================== */
-async function ativarOtimizarRota() {
-  const itens = lista.querySelectorAll('.item-entrega:not(.concluido)')
-  if (itens.length === 0) return alert('Adicione pelo menos um endereço!')
-
-  btnOtimizar.textContent = '⏳ Calculando...'
-  btnOtimizar.disabled = true
-  modalOverlay.classList.add('ativo')
-  listaOrdenada.innerHTML = '<p style="color:#555;text-align:center;padding:20px 0">🔍 Buscando endereços...</p>'
-  document.getElementById('mapContainer').innerHTML = ''
-  modalBtns.innerHTML = ''
-
-  const enderecos = [...itens].map(i => i.querySelector('.item-texto').textContent)
-  const origem = await obterLocalizacao()
-  const coords = await Promise.all(enderecos.map(geocodificarEndereco))
-
-  const validos = coords.filter(Boolean)
-  const falhos  = enderecos.filter((_, i) => !coords[i])
-
-  btnOtimizar.textContent = '🗺 Otimizar Rota'
-  btnOtimizar.disabled = false
-
-  if (validos.length === 0) {
-    listaOrdenada.innerHTML = '<p style="color:#ff4444;text-align:center;padding:20px">❌ Nenhum endereço encontrado. Tente incluir rua + número.</p>'
-    return
-  }
-
-  rotaOrdenada = ordenarPorDistancia(validos, origem)
-  paradaAtual = 0
-  modoAtivo = false
-
-  registrarHistorico(rotaOrdenada.length)
-  renderHistorico()
-  renderModalRota(falhos, origem)
-}
-
-function renderModalRota(falhos = [], origem = null) {
-  listaOrdenada.innerHTML = ''
-
-  if (falhos.length) {
-    const av = document.createElement('p')
-    av.style.cssText = 'color:#FF5C00;font-size:12px;background:#1a0d00;padding:8px 12px;border-radius:8px;margin-bottom:10px'
-    av.textContent = '⚠️ Não encontrado: ' + falhos.join(', ')
-    listaOrdenada.appendChild(av)
-  }
-
-  rotaOrdenada.forEach((p, i) => {
-    const div = document.createElement('div')
-    div.className = 'modal-item' +
-      (modoAtivo && i < paradaAtual ? ' parada-concluida' : '') +
-      (modoAtivo && i === paradaAtual ? ' parada-atual' : '')
-    div.innerHTML = `
-      <div class="numero">${modoAtivo && i < paradaAtual ? '✓' : i + 1}</div>
-      <span>${p.endereco}</span>
-      ${modoAtivo && i === paradaAtual ? '<span class="badge-atual">agora</span>' : ''}
-    `
-    listaOrdenada.appendChild(div)
-  })
-
-  // Mapa
-  if (origem) iniciarMapa(rotaOrdenada, origem)
-
-  // Botões
-  modalBtns.innerHTML = ''
-  if (!modoAtivo) {
-    const bw = document.createElement('button')
-    bw.className = 'btn-iniciar-waze'
-    bw.textContent = '🗺 Iniciar no Waze'
-    bw.addEventListener('click', () => iniciarRota('waze'))
-
-    const bm = document.createElement('button')
-    bm.className = 'btn-iniciar-maps'
-    bm.textContent = '📍 Google Maps'
-    bm.addEventListener('click', () => iniciarRota('maps'))
-
-    modalBtns.appendChild(bw)
-    modalBtns.appendChild(bm)
-  } else {
-    const temProx = paradaAtual < rotaOrdenada.length - 1
-    const bp = document.createElement('button')
-    bp.className = 'btn-proxima-parada'
-    bp.disabled = !temProx
-    bp.textContent = temProx
-      ? `▶ Próxima parada (${paradaAtual + 2}/${rotaOrdenada.length})`
-      : '🎉 Última parada!'
-    if (temProx) bp.addEventListener('click', avancarParada)
-    modalBtns.appendChild(bp)
-  }
-
-  // Texto do botão cancelar
-  btnCancelarModal.textContent = modoAtivo
-    ? `Encerrar rota (${paradaAtual}/${rotaOrdenada.length} concluídas)`
-    : 'Cancelar'
-}
-
-function iniciarRota(nav) {
-  appNavegador = nav
-  modoAtivo = true
-  paradaAtual = 0
-  abrirNavegador(0)
-  renderModalRota([], null)
-}
-
-function abrirNavegador(idx) {
-  const p = rotaOrdenada[idx]
-  if (!p) return
-  const enc = encodeURIComponent(p.endereco + ', ' + getCidade())
-  if (appNavegador === 'waze') {
-    window.open(`https://waze.com/ul?q=${enc}&navigate=yes`)
-  } else {
-    const rest = rotaOrdenada.slice(idx)
-    if (rest.length === 1) {
-      window.open(`https://www.google.com/maps/dir/?api=1&destination=${enc}&travelmode=driving`)
-    } else {
-      const wp = rest.slice(1, -1).map(x => encodeURIComponent(x.endereco + ', ' + getCidade())).join('|')
-      const dest = encodeURIComponent(rest[rest.length - 1].endereco + ', ' + getCidade())
-      window.open(`https://www.google.com/maps/dir/?api=1&origin=${enc}&destination=${dest}${wp ? '&waypoints=' + wp : ''}&travelmode=driving`)
+    function renderListas() {
+        lista.innerHTML = entregas.map((e, i) => `
+            <li class="item-entrega">
+                <button onclick="toggleFav('${e.replace(/'/g, "\\")}')" class="btn-estrela">${favoritos.includes(e) ? '⭐' : '☆'}</button>
+                <span class="item-texto">${e}</span>
+                <button onclick="entregas.splice(${i},1);renderListas();" class="btn-remover">✕</button>
+            </li>`).join('') || '<p style="text-align:center;padding:20px;color:#444;">Lista vazia</p>';
+        
+        listaFavs.innerHTML = favoritos.map(f => `
+            <li class="item-entrega">
+                <span class="item-texto">${f}</span>
+                <button onclick="window.usarFavorito('${f.replace(/'/g, "\\")}')" style="background:#FF5C00; border:none; color:#fff; padding:10px; border-radius:8px; font-weight:bold;">USAR</button>
+            </li>`).join('') || '<p style="text-align:center;padding:20px;color:#444;">Sem favoritos</p>';
+        document.getElementById('contador').textContent = `${entregas.length} entregas`;
     }
-  }
-  marcarNaLista(idx)
-}
 
-function avancarParada() {
-  concluirNaLista(paradaAtual)
-  paradaAtual++
-  if (paradaAtual >= rotaOrdenada.length) { encerrarRota(); return }
-  abrirNavegador(paradaAtual)
-  renderModalRota([], null)
-}
+    // --- ROTA REAL (OSRM) E MAPA ---
+    async function iniciarNavegacao(rota) {
+        let atual = 0;
+        modalOverlay.classList.add('ativa');
 
-function marcarNaLista(idx) {
-  const end = rotaOrdenada[idx].endereco
-  lista.querySelectorAll('.item-entrega').forEach(item => {
-    if (item.querySelector('.item-texto').textContent === end)
-      item.style.borderColor = '#FF5C00'
-  })
-}
+        const carregarPasso = async () => {
+            const p = rota[atual];
+            document.getElementById('mapContainer').innerHTML = '<div id="map" style="height:350px;"></div>';
+            if (mapa) mapa.remove();
+            mapa = L.map('map', {zoomControl:false, attributionControl:false});
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(mapa);
 
-function concluirNaLista(idx) {
-  const end = rotaOrdenada[idx].endereco
-  lista.querySelectorAll('.item-entrega').forEach(item => {
-    if (item.querySelector('.item-texto').textContent === end) {
-      item.classList.add('concluido')
-      item.style.borderColor = ''
-      const btn = item.querySelector('.btn-concluido')
-      if (btn) btn.disabled = true
+            // BUSCA O TRAJETO REAL POR RUAS (API OSRM)
+            const pts = rota.map(r => `${r.lon},${r.lat}`).join(';');
+            try {
+                const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${locAtual.lon},${locAtual.lat};${pts}?overview=full&geometries=geojson`);
+                const data = await res.json();
+                if(data.routes && data.routes[0]) {
+                    const realCoords = data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
+                    const poly = L.polyline(realCoords, {color: '#FF5C00', weight: 5, opacity: 0.8}).addTo(mapa);
+                    mapa.fitBounds(poly.getBounds(), {padding: [40, 40]});
+                    const dist = (data.routes[0].distance / 1000).toFixed(1);
+                    document.getElementById('infoRota').textContent = `⚡ Trajeto Real: ${dist} km total`;
+                }
+            } catch(e) { console.error("Erro no trajeto real, usando linha direta."); }
+
+            // Marcadores
+            rota.forEach((r, idx) => {
+                L.circleMarker([r.lat, r.lon], {radius: idx===atual?10:5, color: idx===atual?'#fff':'#FF5C00', fillColor:'#FF5C00', fillOpacity:1}).addTo(mapa);
+            });
+
+            document.getElementById('controleNavegacao').innerHTML = `
+                <div style="padding:15px; text-align:center;">
+                    <p style="color:#FF5C00; font-size:11px; font-weight:bold;">PARADA ${atual+1} DE ${rota.length}</p>
+                    <h2 style="font-size:18px; margin:10px 0;">${p.endereco}</h2>
+                </div>
+                <button id="btnConcluir">✅ CONCLUIR E PRÓXIMA</button>`;
+
+            document.getElementById('modalBtns').innerHTML = `
+                <button class="btn-nav waze" onclick="window.open('https://waze.com/ul?q=${encodeURIComponent(p.endereco)}&navigate=yes')">WAZE</button>
+                <button class="btn-nav maps" onclick="window.open('https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.endereco)}')">MAPS</button>`;
+
+            document.getElementById('btnConcluir').onclick = () => {
+                entregas = entregas.filter(e => e !== p.endereco);
+                renderListas();
+                atual++;
+                if (atual < rota.length) carregarPasso();
+                else { alert("Fim da jornada!"); modalOverlay.classList.remove('ativa'); }
+            };
+        };
+        carregarPasso();
     }
-  })
-  salvarLista()
-  atualizarContador()
-}
 
-function encerrarRota() {
-  concluirNaLista(rotaOrdenada.length - 1)
-  modoAtivo = false; rotaOrdenada = []; paradaAtual = 0
-  fecharModal()
-  setTimeout(() => alert('🎉 Rota concluída! Todas as entregas feitas!'), 200)
-}
+    btnOtimizar.onclick = async () => {
+        if (entregas.length === 0) return;
+        btnOtimizar.textContent = "⌛...";
+        const pontos = await Promise.all(entregas.map(async e => {
+            const r = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(e)}&format=json&limit=1`);
+            const d = await r.json();
+            return d[0] ? { lat: d[0].lat, lon: d[0].lon, endereco: e } : null;
+        }));
+        const validos = pontos.filter(p => p);
+        // Otimização simples (Vizinho mais próximo)
+        let rota = [], ref = locAtual, copia = [...validos];
+        while(copia.length > 0) {
+            copia.sort((a,b) => Math.hypot(a.lat-ref.lat, a.lon-ref.lon) - Math.hypot(b.lat-ref.lat, b.lon-ref.lon));
+            let p = copia.shift(); rota.push(p); ref = p;
+        }
+        btnOtimizar.textContent = "⚡ Otimizar Rota";
+        iniciarNavegacao(rota);
+    };
 
-function fecharModal() {
-  modalOverlay.classList.remove('ativo')
-  if (mapaLeaflet) { mapaLeaflet.remove(); mapaLeaflet = null }
-  document.getElementById('mapContainer').innerHTML = ''
-}
+    document.getElementById('btnAdicionar').onclick = addEntrega;
+    document.getElementById('btnFecharModal').onclick = () => modalOverlay.classList.remove('ativa');
+    document.getElementById('btnCancelarModal').onclick = () => modalOverlay.classList.remove('ativa');
+    document.getElementById('btnLimpar').onclick = () => { entregas = []; renderListas(); };
+    
+    document.querySelectorAll('.aba').forEach(b => {
+        b.onclick = () => {
+            document.querySelectorAll('.aba, .aba-content').forEach(el => el.classList.remove('ativa'));
+            b.classList.add('ativa');
+            document.getElementById(`aba-${b.dataset.aba}`).classList.add('ativa');
+        }
+    });
 
-/* =====================================================
-   CRIAR ITEM NA LISTA
-   ===================================================== */
-function criarItem(endereco) {
-  const vazio = lista.querySelector('.vazio')
-  if (vazio) vazio.remove()
-
-  const li = document.createElement('li')
-  li.className = 'item-entrega'
-  const fav = isFavorito(endereco)
-
-  li.innerHTML = `
-    <button class="btn-favorito ${fav ? 'ativo' : ''}" title="Favoritar">★</button>
-    <span class="item-texto">${endereco}</span>
-    <button class="btn-waze">🗺 Waze</button>
-    <button class="btn-concluido">✓ Entregue</button>
-    <button class="btn-remover">✕</button>
-  `
-
-  li.querySelector('.btn-favorito').addEventListener('click', () => {
-    toggleFavorito(endereco)
-    li.querySelector('.btn-favorito').classList.toggle('ativo', isFavorito(endereco))
-    renderFavoritos()
-  })
-
-  li.querySelector('.btn-waze').addEventListener('click', () => {
-    window.open(`https://waze.com/ul?q=${encodeURIComponent(endereco + ', ' + getCidade())}&navigate=yes`)
-  })
-
-  li.querySelector('.btn-concluido').addEventListener('click', function() {
-    li.classList.add('concluido')
-    this.disabled = true
-    const proximos = lista.querySelectorAll('.item-entrega:not(.concluido)')
-    if (proximos.length > 0) {
-      const prox = proximos[0].querySelector('.item-texto').textContent
-      setTimeout(() => window.open(`https://waze.com/ul?q=${encodeURIComponent(prox + ', ' + getCidade())}&navigate=yes`), 500)
-    } else {
-      setTimeout(() => alert('🎉 Todas as entregas concluídas!'), 300)
-    }
-    salvarLista()
-  })
-
-  li.querySelector('.btn-remover').addEventListener('click', () => {
-    li.remove()
-    atualizarContador()
-    salvarLista()
-    if (!lista.querySelector('.item-entrega'))
-      lista.innerHTML = '<li class="vazio">Nenhuma entrega adicionada ainda.</li>'
-  })
-
-  lista.appendChild(li)
-}
-
-function adicionarEndereco() {
-  const end = input.value.trim()
-  if (!end) return
-  criarItem(end)
-  input.value = ''
-  fecharSugestoes()
-  input.focus()
-  atualizarContador()
-  salvarLista()
-}
-
-function renderListaComFavoritos() {
-  lista.querySelectorAll('.item-entrega').forEach(item => {
-    const end = item.querySelector('.item-texto').textContent
-    item.querySelector('.btn-favorito').classList.toggle('ativo', isFavorito(end))
-  })
-}
-
-/* =====================================================
-   CONTADOR / SAVE / LOAD
-   ===================================================== */
-function atualizarContador() {
-  const total = lista.querySelectorAll('.item-entrega').length
-  contador.textContent = `${total} entrega${total !== 1 ? 's' : ''} adicionada${total !== 1 ? 's' : ''}`
-}
-
-function salvarLista() {
-  const itens = lista.querySelectorAll('.item-entrega')
-  const dados = [...itens].map(item => ({
-    endereco: item.querySelector('.item-texto').textContent,
-    concluido: item.classList.contains('concluido')
-  }))
-  localStorage.setItem('luvit-entregas', JSON.stringify(dados))
-}
-
-function carregarLista() {
-  const salvo = localStorage.getItem('luvit-entregas')
-  if (!salvo) return
-  JSON.parse(salvo).forEach(d => {
-    criarItem(d.endereco)
-    if (d.concluido) {
-      const itens = lista.querySelectorAll('.item-entrega')
-      const ultimo = itens[itens.length - 1]
-      ultimo.classList.add('concluido')
-      const btn = ultimo.querySelector('.btn-concluido')
-      if (btn) btn.disabled = true
-    }
-  })
-  atualizarContador()
-}
-
-/* =====================================================
-   EVENTOS
-   ===================================================== */
-btnAdicionar.addEventListener('click', adicionarEndereco)
-input.addEventListener('keypress', e => { if (e.key === 'Enter') adicionarEndereco() })
-btnOtimizar.addEventListener('click', ativarOtimizarRota)
-
-btnFecharModal.addEventListener('click', () => {
-  if (modoAtivo && !confirm('Encerrar a rota atual?')) return
-  modoAtivo = false; rotaOrdenada = []; paradaAtual = 0
-  fecharModal()
-})
-btnCancelarModal.addEventListener('click', () => {
-  if (modoAtivo && !confirm('Encerrar a rota atual?')) return
-  modoAtivo = false; rotaOrdenada = []; paradaAtual = 0
-  fecharModal()
-})
-
-btnLimpar.addEventListener('click', () => {
-  if (!confirm('Limpar todas as entregas do dia?')) return
-  lista.innerHTML = '<li class="vazio">Nenhuma entrega adicionada ainda.</li>'
-  localStorage.removeItem('luvit-entregas')
-  atualizarContador()
-})
-
-/* =====================================================
-   INIT
-   ===================================================== */
-carregarLista()
-renderFavoritos()
-renderHistorico()
-detectarCidade() // detecta cidade pelo GPS ao abrir o app
+    navigator.geolocation.getCurrentPosition(p => { locAtual = { lat: p.coords.latitude, lon: p.coords.longitude }; });
+    renderListas();
+});
