@@ -6,6 +6,9 @@
   <title>Luvit</title>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#FF5C00">
+  <link rel="icon" href="favicon.png" type="image/png">
+  <link rel="apple-touch-icon" href="icon-192x192.png">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -15,52 +18,84 @@
     <p>L • H • V</p>
   </header>
 
+  <!-- Cidade detectada -->
+  <div id="labelCidade" class="label-cidade">📍 Detectando localização...</div>
+
+  <!-- Abas -->
+  <nav class="abas">
+    <button class="aba ativa" data-aba="entregas">📦 Entregas</button>
+    <button class="aba" data-aba="favoritos">★ Favoritos</button>
+    <button class="aba" data-aba="historico">📋 Histórico</button>
+  </nav>
+
   <main>
-    <h2>Suas entregas de hoje</h2>
-    <p id="contador">0 entregas adicionadas</p>
 
-    <div class="top-btns">
-      <button id="btnLimpar">🗑 Limpar dia</button>
-      <button id="btnModoMotoboy">🛵 Modo Motoboy</button>
-    </div>
-
-    <!-- Input com autocomplete -->
-    <div class="input-wrapper">
-      <div class="input-area">
-        <input type="text" id="enderecoInput" placeholder="Digite o endereço..." autocomplete="off">
-        <button id="btnAdicionar">+ Adicionar</button>
+    <!-- ===== ABA ENTREGAS ===== -->
+    <section id="aba-entregas" class="aba-content ativa">
+      <div class="topo-entregas">
+        <p id="contador">0 entregas adicionadas</p>
+        <div class="topo-btns">
+          <button id="btnLimpar">🗑 Limpar dia</button>
+          <button id="btnOtimizar">🗺 Otimizar Rota</button>
+        </div>
       </div>
-      <div id="sugestoes" class="sugestoes-box" style="display:none"></div>
-    </div>
 
-    <!-- Favoritos -->
-    <section id="favoritosSection" style="display:none">
-      <div class="section-header">★ Favoritos</div>
+      <div class="input-wrapper">
+        <div class="input-area">
+          <input type="text" id="enderecoInput" placeholder="Ex: Rua Cascavel, 80" autocomplete="off">
+          <button id="btnAdicionar">+ Adicionar</button>
+        </div>
+        <div id="sugestoes" class="sugestoes-box" style="display:none"></div>
+      </div>
+
+      <ul id="listaEntregas">
+        <li class="vazio">Nenhuma entrega adicionada ainda.</li>
+      </ul>
+    </section>
+
+    <!-- ===== ABA FAVORITOS ===== -->
+    <section id="aba-favoritos" class="aba-content">
+      <div id="favoritosVazio" class="estado-vazio">
+        <div class="vazio-icon">★</div>
+        <p>Nenhum favorito ainda.</p>
+        <span>Toque na estrela ★ em qualquer endereço para salvar.</span>
+      </div>
       <div id="favoritosLista"></div>
     </section>
 
-    <!-- Lista de entregas -->
-    <ul id="listaEntregas">
-      <li class="vazio">Nenhuma entrega adicionada ainda.</li>
-    </ul>
-
-    <!-- Histórico -->
-    <section id="historicoSection" style="display:none">
-      <div class="section-header">📋 Histórico recente</div>
+    <!-- ===== ABA HISTÓRICO ===== -->
+    <section id="aba-historico" class="aba-content">
+      <div id="historicoVazio" class="estado-vazio">
+        <div class="vazio-icon">📋</div>
+        <p>Nenhuma rota otimizada ainda.</p>
+        <span>O histórico aparece após usar "Otimizar Rota".</span>
+      </div>
       <div id="historicoLista"></div>
     </section>
+
   </main>
 
+  <!-- ===== MODAL ROTA / MAPA ===== -->
   <div class="modal-overlay" id="modalOverlay">
     <div class="modal">
-      <h3>🛵 Modo Motoboy</h3>
-      <p style="color:#555; font-size:13px; margin-bottom:16px;">Rota otimizada por proximidade</p>
-      <div id="listaOrdenada"></div>
-      <div class="modal-btns"></div>
-      <button class="btn-fechar-modal" id="btnFecharModal">Cancelar</button>
+
+      <!-- Tela 1: Lista ordenada -->
+      <div id="telaLista">
+        <div class="modal-header">
+          <h3>🗺 Rota Otimizada</h3>
+          <button class="btn-fechar-x" id="btnFecharModal">✕</button>
+        </div>
+        <p class="modal-sub">Ordem sugerida a partir da sua localização</p>
+        <div id="listaOrdenada"></div>
+        <div id="mapContainer"></div>
+        <div class="modal-btns" id="modalBtns"></div>
+        <button class="btn-fechar-modal" id="btnCancelarModal">Cancelar</button>
+      </div>
+
     </div>
   </div>
 
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
