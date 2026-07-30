@@ -4,93 +4,90 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <title>Painel — Luvit</title>
-  <meta name="description" content="Organize e acompanhe suas entregas no Luvit.">
-  <meta name="theme-color" content="#111111">
+  <meta name="description" content="Planeje e execute suas rotas de entrega com o Luvit.">
+  <meta name="theme-color" content="#16181b">
   <link rel="manifest" href="/manifest.json">
   <link rel="icon" href="/assets/icons/favicon-32.png">
   <link rel="apple-touch-icon" href="/assets/icons/apple-touch-icon.png">
+  <link rel="preconnect" href="https://unpkg.com">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin>
   <link rel="stylesheet" href="/css/global.css">
   <link rel="stylesheet" href="/css/app.css">
 </head>
 <body class="app-body">
-  <a class="skip-link" href="#app-main">Pular para o conteúdo</a>
-  <div class="app-shell">
-    <aside class="sidebar" aria-label="Menu lateral">
-      <a class="brand brand-light" href="/">LUV<span>IT</span></a>
-      <nav aria-label="Navegação do painel">
-        <button class="nav-item active" type="button" data-view="deliveries"><span aria-hidden="true">⌖</span>Rota atual</button>
-        <button class="nav-item" type="button" data-view="favorites"><span aria-hidden="true">☆</span>Favoritos</button>
-        <button class="nav-item" type="button" data-view="history"><span aria-hidden="true">↺</span>Histórico</button>
+  <a class="skip-link" href="#workspace-main">Pular para o conteúdo</a>
+  <div id="version-banner" class="version-banner" role="status" hidden><span>Uma nova versão do Luvit está disponível.</span><button id="reload-app" type="button">Atualizar agora</button></div>
+  <div class="app-shell" id="app-shell">
+    <aside class="sidebar" id="sidebar" aria-label="Navegação principal">
+      <div class="sidebar-brand"><a class="brand brand-light" href="/" aria-label="Luvit">LUV<span>IT</span></a><button id="collapse-sidebar" class="icon-button sidebar-collapse" type="button" aria-label="Recolher menu" data-tooltip="Recolher menu"><span data-icon="collapse"></span></button></div>
+      <button class="button button-primary new-route-button" type="button" data-action="new-route"><span data-icon="plus"></span><span>Nova rota</span></button>
+      <nav class="sidebar-nav" aria-label="Áreas do produto">
+        <p>Operação</p>
+        <button class="sidebar-link active" type="button" data-view="dashboard" data-tooltip="Visão geral"><span data-icon="dashboard"></span><span>Visão geral</span></button>
+        <button class="sidebar-link" type="button" data-view="planner" data-tooltip="Planejar rota"><span data-icon="route"></span><span>Planejar rota</span><b id="sidebar-stop-count">0</b></button>
+        <button class="sidebar-link" type="button" data-view="active" data-tooltip="Rota em andamento" hidden><span data-icon="navigation"></span><span>Rota em andamento</span><i></i></button>
+        <button class="sidebar-link" type="button" data-view="history" data-tooltip="Histórico"><span data-icon="history"></span><span>Histórico</span></button>
+        <p>Biblioteca</p>
+        <button class="sidebar-link" type="button" data-view="favorites" data-tooltip="Favoritos"><span data-icon="favorite"></span><span>Favoritos</span></button>
       </nav>
-      <div class="sidebar-bottom"><span id="connection-status" class="connection-status">Verificando conexão…</span><a href="/">Site Luvit</a><button id="logout-button" type="button">Sair</button></div>
+      <div class="sidebar-footer">
+        <div class="sync-line"><span class="sync-dot"></span><span id="sidebar-sync">Salvo neste dispositivo</span></div>
+        <details class="user-menu"><summary><span class="user-avatar" id="user-initials">LU</span><span class="user-copy"><b id="user-name">Usuário</b><small id="user-email">Conta Luvit</small></span><span data-icon="more"></span></summary><div class="user-popover"><button id="logout-button" type="button"><span data-icon="logout"></span>Sair</button></div></details>
+      </div>
     </aside>
-    <div class="app-content">
-      <header class="app-header">
-        <div class="header-copy"><p id="greeting">Olá!</p><h1>Organize suas entregas</h1></div>
-        <button id="location-button" class="location-button" type="button" title="Definir ponto inicial"><span aria-hidden="true">◎</span><span id="location-label">Definir ponto inicial</span></button>
+    <div class="app-column">
+      <header class="topbar" aria-label="Barra superior">
+        <div class="topbar-title"><button id="mobile-menu-button" class="icon-button mobile-only" type="button" aria-label="Abrir menu" aria-expanded="false"><span data-icon="menu"></span></button><div><nav id="breadcrumb" aria-label="Trilha de navegação">Planejamento</nav><h1 id="page-title">Visão geral</h1><p id="page-subtitle">Acompanhe suas rotas e entregas.</p></div></div>
+        <div class="topbar-actions"><span class="top-status" id="connection-status"><span data-icon="wifi"></span><span>Online</span></span><span class="top-status" id="sync-status"><span class="sync-dot"></span><span>Sincronizado</span></span><button class="icon-button" type="button" aria-label="Ajuda" data-tooltip="Ajuda" id="help-button"><span data-icon="help"></span></button><button class="top-user" type="button" id="top-user-button" aria-label="Menu do usuário"><span class="user-avatar" id="top-user-initials">LU</span></button></div>
       </header>
-      <main id="app-main">
-        <div id="config-banner" class="config-banner" hidden><strong>Modo local ativo.</strong> Configure o Supabase em <code>js/config.js</code> para autenticação e sincronização. Seus dados continuam salvos neste dispositivo.</div>
-        <section class="stats-grid" aria-label="Resumo da rota">
-          <article><span>Entregas</span><strong id="delivery-count">0</strong><small id="completed-count">0 concluídas</small></article>
-          <article><span>Distância</span><strong id="route-distance">—</strong><small>Sequência atual</small></article>
-          <article><span>Status</span><strong id="route-status">Planejando</strong><small id="sync-status">Salvo localmente</small></article>
+      <main id="workspace-main">
+        <div id="config-banner" class="config-banner" hidden><strong>Modo local ativo.</strong> Configure o Supabase para sincronizar os dados entre dispositivos.</div>
+
+        <section class="app-view dashboard-view active" id="dashboard-view" data-view-panel="dashboard" aria-label="Visão geral">
+          <div class="dashboard-metrics" role="group" aria-label="Indicadores reais"><article><span>Rotas hoje</span><strong id="metric-routes-today">0</strong><small>criadas hoje</small></article><article><span>Entregas hoje</span><strong id="metric-stops-today">0</strong><small>na rota atual</small></article><article><span>Concluídas</span><strong id="metric-completed-today">0</strong><small>entregas</small></article><article><span>Distância estimada</span><strong id="metric-distance-today">—</strong><small>rotas calculadas</small></article></div>
+          <div class="dashboard-grid"><section class="surface dashboard-primary" id="dashboard-current" aria-label="Rota atual"></section><section class="surface" aria-label="Rotas recentes"><div class="section-header"><div><h2>Rotas recentes</h2><p>Últimas jornadas salvas.</p></div><button class="text-button" type="button" data-view="history">Ver histórico</button></div><div id="recent-routes" class="compact-list"></div></section><section class="surface" aria-label="Favoritos recentes"><div class="section-header"><div><h2>Favoritos</h2><p>Endereços usados com frequência.</p></div><button class="text-button" type="button" data-view="favorites">Ver todos</button></div><div id="dashboard-favorites" class="compact-list"></div></section><section class="surface" aria-label="Atividade recente"><div class="section-header"><div><h2>Atividade recente</h2><p>Eventos salvos neste dispositivo.</p></div></div><div id="activity-list" class="activity-list"></div></section></div>
         </section>
-        <div class="workspace">
-          <section class="panel delivery-panel" id="deliveries-view">
-            <div class="panel-head"><div><h2>Paradas</h2><p>Adicione os destinos e organize a sequência.</p></div><div class="panel-actions"><button id="clear-button" class="text-button danger" type="button">Limpar</button><button id="optimize-button" class="button button-primary" type="button">Otimizar rota</button></div></div>
-            <form id="delivery-form" class="address-form">
-              <div class="field autocomplete" data-autocomplete-id="suggestions">
-                <label for="address-input">Endereço da entrega</label>
-                <div class="input-action"><input id="address-input" type="text" autocomplete="off" placeholder="Rua, número e cidade" required><button id="add-address-button" class="button button-primary" type="submit">Adicionar</button></div>
-                <div id="suggestions" class="suggestions" hidden></div>
-              </div>
-            </form>
-            <div id="geocode-progress" class="geocode-progress" role="status" aria-live="polite" hidden></div>
-            <div id="unresolved-list" class="unresolved" hidden></div>
-            <div id="delivery-list" class="delivery-list" aria-live="polite"></div>
-          </section>
-          <aside class="route-side" aria-label="Mapa e atalhos">
-            <section class="panel map-panel">
-              <div class="panel-head"><div><h2>Visão da rota</h2><p id="map-caption">Adicione entregas para visualizar.</p></div><div class="map-head-actions"><button id="toggle-map" class="button button-secondary mobile-map-toggle" type="button" aria-expanded="false">Ver mapa</button><button id="expand-map" class="icon-button desktop-map-expand" type="button" aria-label="Ampliar mapa">⛶</button></div></div>
-              <section id="route-map" aria-label="Mapa da rota"></section>
+
+        <section class="app-view planner-view" id="planner-view" data-view-panel="planner" aria-label="Planejamento da rota">
+          <div class="route-kpis" role="group" aria-label="Resumo da rota"><span><b id="summary-stops">0</b> paradas</span><span><b id="summary-distance">—</b></span><span><b id="summary-duration">—</b></span><span><b id="summary-completed">0</b> concluídas</span><span class="sync-summary" id="summary-sync">Salvo localmente</span></div>
+          <div class="mobile-planner-tabs" role="tablist" aria-label="Visualização do planejamento"><button class="active" type="button" role="tab" aria-selected="true" data-planner-tab="list"><span data-icon="list"></span>Lista</button><button type="button" role="tab" aria-selected="false" data-planner-tab="map"><span data-icon="map"></span>Mapa</button></div>
+          <div class="planner-layout">
+            <section class="stops-column" aria-label="Paradas da rota">
+              <div class="column-header"><div><h2>Paradas <span id="stops-count-badge">0</span></h2><p>Organize a sequência de entrega.</p></div><button class="button button-primary compact-button" type="button" data-action="add-stop"><span data-icon="plus"></span>Adicionar</button></div>
+              <label class="search-control"><span data-icon="search"></span><span class="sr-only">Pesquisar paradas</span><input id="stop-search" type="search" placeholder="Buscar nas paradas"></label>
+              <div class="stop-filters" role="group" aria-label="Filtrar paradas"><button class="active" type="button" data-stop-filter="all">Todas</button><button type="button" data-stop-filter="pending">Pendentes</button><button type="button" data-stop-filter="completed">Concluídas</button><button type="button" data-stop-filter="problem">Problema</button></div>
+              <div id="bulk-actions" class="bulk-actions" hidden><span><b id="bulk-count">0</b> selecionadas</span><button type="button" data-bulk="complete">Concluir</button><button type="button" data-bulk="end">Mover ao final</button><button class="danger" type="button" data-bulk="delete">Excluir</button></div>
+              <div id="stop-list" class="stop-list" aria-live="polite"></div>
             </section>
-            <section class="panel shortcuts"><h2>Atalhos</h2><button id="start-route-button" class="button button-primary" type="button">Iniciar rota</button><button id="use-location-button" class="button button-secondary" type="button">Usar minha localização</button><button id="manual-start-button" class="button button-secondary" type="button">Escolher ponto inicial</button></section>
-          </aside>
-        </div>
-        <section class="panel secondary-view" id="favorites-view" hidden><div class="panel-head"><div><h2>Endereços favoritos</h2><p>Destinos salvos para reutilizar rapidamente.</p></div></div><div id="favorites-list" class="card-list"></div></section>
-        <section class="panel secondary-view" id="history-view" hidden><div class="panel-head"><div><h2>Histórico de rotas</h2><p>Jornadas finalizadas neste dispositivo ou sincronizadas.</p></div></div><div id="history-list" class="card-list"></div></section>
+            <section class="map-column" aria-label="Mapa da rota">
+              <div class="map-toolbar"><div><strong>Mapa da rota</strong><span id="map-route-status">Aguardando paradas</span></div><div class="map-tools"><button class="icon-button" id="map-locate" type="button" aria-label="Centralizar" data-tooltip="Centralizar"><span data-icon="locate"></span></button><button class="icon-button" id="map-show-all" type="button" aria-label="Mostrar todas" data-tooltip="Mostrar todas"><span data-icon="route"></span></button><button class="icon-button" id="map-layer" type="button" aria-label="Alternar camada" data-tooltip="Alternar camada"><span data-icon="layers"></span></button><button class="icon-button" id="map-fullscreen" type="button" aria-label="Tela cheia" data-tooltip="Tela cheia"><span data-icon="expand"></span></button></div></div>
+              <div id="route-map" tabindex="0" role="application" aria-label="Mapa. Use a lista de paradas como alternativa textual."></div>
+              <div id="map-selection-hint" class="map-selection-hint" hidden><span>Toque no mapa para marcar o local da parada.</span><button type="button" data-action="cancel-map-selection">Cancelar</button></div>
+            </section>
+            <aside class="inspector" id="stop-inspector" aria-label="Painel contextual"></aside>
+          </div>
+          <div class="mobile-planner-actions"><button id="mobile-optimize" class="button button-secondary" type="button" data-action="optimize">Otimizar</button><button id="mobile-start-route" class="button button-primary" type="button" data-action="start-route">Iniciar rota</button></div>
+        </section>
+
+        <section class="app-view active-route-view" id="active-view" data-view-panel="active" aria-label="Rota em andamento"><div id="driver-experience"></div></section>
+
+        <section class="app-view history-view" id="history-view" data-view-panel="history" aria-label="Histórico de rotas"><div class="view-toolbar"><label class="search-control"><span data-icon="search"></span><span class="sr-only">Pesquisar histórico</span><input id="history-search" type="search" placeholder="Buscar rota"></label><select id="history-period" aria-label="Filtrar período"><option value="all">Todo o período</option><option value="7">Últimos 7 dias</option><option value="30">Últimos 30 dias</option></select></div><div class="surface table-surface"><div id="history-content"></div></div></section>
+
+        <section class="app-view favorites-view" id="favorites-view" data-view-panel="favorites" aria-label="Endereços favoritos"><div class="view-toolbar"><label class="search-control"><span data-icon="search"></span><span class="sr-only">Pesquisar favoritos</span><input id="favorites-search" type="search" placeholder="Buscar endereço ou cidade"></label><select id="favorites-city" aria-label="Filtrar cidade"><option value="all">Todas as cidades</option></select><button id="add-selected-favorites" class="button button-primary" type="button" disabled>Adicionar selecionados à rota</button></div><div class="surface"><div id="favorites-content" class="favorites-table"></div></div></section>
       </main>
     </div>
   </div>
-  <div id="mobile-actions" class="mobile-actions"><button id="mobile-optimize-button" class="button button-secondary" type="button">Otimizar</button><button id="mobile-start-button" class="button button-primary" type="button">Iniciar rota</button></div>
-  <nav class="mobile-nav" aria-label="Navegação móvel">
-    <button class="active" type="button" data-view="deliveries"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s6-5.1 6-11a6 6 0 1 0-12 0c0 5.9 6 11 6 11Z"/><circle cx="12" cy="10" r="2"/></svg><span>Rota</span></button>
-    <button type="button" data-view="favorites"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9L12 3Z"/></svg><span>Favoritos</span></button>
-    <button type="button" data-view="history"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.3-5.7L4 8.6M4 4v4.6h4.6M12 7v5l3 2"/></svg><span>Histórico</span></button>
-  </nav>
-  <dialog id="navigation-dialog" class="navigation-dialog">
-    <div class="dialog-head navigation-dialog-head"><div><small>Rota em andamento</small><h2 id="navigation-progress">Parada 1 de 1</h2></div><button id="close-navigation" class="icon-button" type="button" aria-label="Fechar navegação">×</button></div>
-    <div id="navigation-map"></div>
-    <section class="current-stop"><small>Parada atual</small><h3 id="current-address">Carregando parada</h3><p id="next-address"></p><div class="progress"><span id="progress-bar"></span></div></section>
-    <div class="navigation-links"><button id="open-waze" class="button button-secondary" type="button">Abrir no Waze</button><button id="open-maps" class="button button-secondary" type="button">Google Maps</button></div>
-    <div class="navigation-actions"><button id="previous-stop" class="button button-secondary" type="button">Voltar</button><button id="skip-stop" class="button button-secondary" type="button">Pular</button><button id="complete-stop" class="button complete-button" type="button">Concluir parada</button></div>
-    <button id="finish-route" class="text-button danger" type="button">Finalizar rota</button>
-  </dialog>
-  <dialog id="edit-dialog" class="small-dialog">
-    <form id="edit-form"><div class="dialog-head"><h2>Editar entrega</h2><button class="icon-button" type="submit" value="cancel" formmethod="dialog" aria-label="Fechar">×</button></div>
-      <div class="field autocomplete" data-autocomplete-id="edit-suggestions"><label for="edit-address">Endereço</label><input id="edit-address" type="text" autocomplete="off" required><div id="edit-suggestions" class="suggestions" hidden></div></div>
-      <div class="field"><label for="edit-notes">Observações</label><textarea id="edit-notes" rows="3"></textarea></div>
-      <div class="dialog-actions"><button class="button button-secondary" type="submit" value="cancel" formmethod="dialog">Cancelar</button><button id="save-edit-button" class="button button-primary" type="submit">Salvar</button></div>
-    </form>
-  </dialog>
-  <dialog id="start-dialog" class="small-dialog">
-    <form id="start-form"><div class="dialog-head"><h2>Ponto inicial</h2><button class="icon-button" type="submit" value="cancel" formmethod="dialog" aria-label="Fechar">×</button></div><p>Digite um endereço para definir de onde a rota deve começar.</p>
-      <div class="field autocomplete" data-autocomplete-id="start-suggestions"><label for="start-address">Endereço inicial</label><input id="start-address" type="text" autocomplete="off" placeholder="Rua, número e cidade" required><div id="start-suggestions" class="suggestions" hidden></div></div>
-      <div class="dialog-actions"><button class="button button-secondary" type="submit" value="cancel" formmethod="dialog">Cancelar</button><button id="save-start-button" class="button button-primary" type="submit">Definir ponto</button></div>
-    </form>
-  </dialog>
+
+  <nav class="mobile-nav" aria-label="Navegação móvel"><button class="active" type="button" data-view="dashboard"><span data-icon="home"></span><b>Início</b></button><button type="button" data-view="planner"><span data-icon="route"></span><b>Rota</b></button><button type="button" data-view="history"><span data-icon="history"></span><b>Histórico</b></button><button type="button" id="mobile-more-button" aria-expanded="false"><span data-icon="more"></span><b>Mais</b></button></nav>
+  <div id="mobile-more-menu" class="mobile-more-menu" hidden><button type="button" data-view="favorites"><span data-icon="favorite"></span>Favoritos</button><button type="button" id="mobile-logout"><span data-icon="logout"></span>Sair</button></div>
+
+  <aside id="stop-drawer" class="drawer" aria-labelledby="drawer-title" inert><div class="drawer-backdrop" data-action="close-drawer"></div><div class="drawer-panel" role="dialog" aria-modal="true"><header aria-label="Adicionar ou editar parada"><div><span class="eyebrow-small">Planejamento</span><h2 id="drawer-title">Adicionar parada</h2></div><button class="icon-button" type="button" data-action="close-drawer" aria-label="Fechar"><span data-icon="close"></span></button></header><form id="stop-form"><div class="field autocomplete" data-autocomplete-id="drawer-suggestions"><label for="drawer-address">Buscar endereço</label><input id="drawer-address" type="text" autocomplete="off" placeholder="Rua, número, bairro ou cidade" required><div id="drawer-suggestions" class="suggestions" hidden></div></div><button id="explicit-search" class="text-button inline-action" type="button"><span data-icon="search"></span>Procurar endereço completo</button><button id="pick-on-map" class="text-button inline-action" type="button"><span data-icon="map"></span>Marcar local no mapa</button><div id="address-preview" class="address-preview" hidden><span data-icon="locate"></span><div><strong id="preview-address"></strong><small id="preview-detail"></small></div></div><details class="details-fields"><summary>Mais informações</summary><div class="form-grid"><div class="field field-wide"><label for="drawer-street">Rua</label><input id="drawer-street" type="text"></div><div class="field"><label for="drawer-number">Número</label><input id="drawer-number" type="text" inputmode="numeric"></div><div class="field"><label for="drawer-complement">Complemento</label><input id="drawer-complement" type="text"></div><div class="field"><label for="drawer-neighborhood">Bairro</label><input id="drawer-neighborhood" type="text"></div><div class="field"><label for="drawer-city">Cidade</label><input id="drawer-city" type="text"></div><div class="field"><label for="drawer-state">Estado</label><input id="drawer-state" type="text"></div><div class="field"><label for="drawer-postcode">CEP</label><input id="drawer-postcode" type="text" inputmode="numeric"></div></div></details><div class="field"><label for="drawer-notes">Observação</label><textarea id="drawer-notes" rows="3" placeholder="Referência, contato ou instrução opcional"></textarea></div><label class="checkbox-control"><input id="drawer-favorite" type="checkbox"><span>Salvar também como favorito</span></label><div id="drawer-message" class="form-message" aria-live="polite"></div><footer><button class="button button-secondary" type="button" data-action="close-drawer">Cancelar</button><button id="add-and-another" class="button button-secondary" type="button">Adicionar e criar outra</button><button id="save-stop" class="button button-primary" type="submit">Adicionar parada</button></footer></form></div></aside>
+
+  <section id="stop-sheet" class="bottom-sheet" aria-label="Detalhes da parada" inert><div class="sheet-backdrop" data-action="close-sheet"></div><div class="sheet-panel" role="dialog" aria-modal="false"><button class="sheet-handle" type="button" aria-label="Expandir painel"></button><div id="sheet-content"></div></div></section>
+
+  <dialog id="optimization-dialog" class="modal optimization-modal"><form method="dialog"><header aria-label="Resultado da otimização"><span class="modal-icon"><span data-icon="route"></span></span><div><span class="eyebrow-small">Sequência sugerida</span><h2>Encontramos uma sequência estimada mais curta.</h2><p>Compare antes de alterar sua rota.</p></div></header><div class="comparison-grid"><article><span>Antes</span><strong id="before-distance">—</strong><small id="before-duration">—</small></article><article class="suggested"><span>Sequência sugerida</span><strong id="after-distance">—</strong><small id="after-duration">—</small></article><article><span>Diferença estimada</span><strong id="difference-distance">—</strong><small id="difference-duration">—</small></article></div><p class="estimate-disclaimer">Estimativa calculada a partir dos serviços de rota disponíveis. O resultado pode variar durante a jornada.</p><footer><button class="button button-secondary" type="submit" value="cancel">Manter sequência atual</button><button id="apply-optimization" class="button button-primary" type="submit" value="default">Aplicar sequência</button></footer></form></dialog>
+
+  <dialog id="route-summary-dialog" class="modal route-summary-modal"><div id="route-summary-content"></div></dialog>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin></script>
   <script src="/js/config.js"></script>

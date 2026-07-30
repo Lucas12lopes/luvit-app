@@ -1,9 +1,10 @@
-const VERSION = "luvit-v4-address-mobile";
+const VERSION = "luvit-professional-v5";
 const STATIC_CACHE = `${VERSION}-static`;
 const PAGE_CACHE = `${VERSION}-pages`;
-const LOCAL_ASSETS = ["/", "/index.html", "/login.html", "/cadastro.html", "/recuperar-senha.html", "/app/", "/app/index.html", "/manifest.json", "/css/global.css", "/css/landing.css", "/css/auth.css", "/css/app.css", "/js/config.js", "/js/ui.js", "/js/landing.js", "/js/supabase-client.js", "/js/auth.js", "/js/app.js", "/js/maps.js", "/js/routes.js", "/js/storage.js", "/assets/icons/favicon-32.png", "/assets/icons/apple-touch-icon.png", "/assets/icons/icon-192x192.png", "/assets/icons/icon-512x512.png"];
-self.addEventListener("install", event => { event.waitUntil(caches.open(STATIC_CACHE).then(cache => cache.addAll(LOCAL_ASSETS)).then(() => self.skipWaiting())); });
+const LOCAL_ASSETS = ["/", "/index.html", "/login.html", "/cadastro.html", "/recuperar-senha.html", "/app/", "/app/index.html", "/manifest.json", "/css/global.css", "/css/landing.css", "/css/auth.css", "/css/app.css", "/js/config.js", "/js/ui.js", "/js/landing.js", "/js/supabase-client.js", "/js/auth.js", "/js/app.js", "/js/maps.js", "/js/routes.js", "/js/storage.js", "/js/state/app-state.js", "/js/components/icons.js", "/js/utils/format.js", "/assets/icons/favicon-32.png", "/assets/icons/apple-touch-icon.png", "/assets/icons/icon-192x192.png", "/assets/icons/icon-512x512.png"];
+self.addEventListener("install", event => { event.waitUntil(caches.open(STATIC_CACHE).then(cache => cache.addAll(LOCAL_ASSETS))); });
 self.addEventListener("activate", event => { event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(key => !key.startsWith(VERSION)).map(key => caches.delete(key)))).then(() => self.clients.claim())); });
+self.addEventListener("message", event => { if (event.data?.type === "SKIP_WAITING") self.skipWaiting(); });
 function isPrivateOrExternal(url) { return url.origin !== self.location.origin || /supabase|photon|nominatim|openstreetmap|cartocdn|osrm|waze|google/i.test(url.href); }
 self.addEventListener("fetch", event => {
   if (event.request.method !== "GET") return;

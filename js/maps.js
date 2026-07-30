@@ -99,6 +99,35 @@ export function geocode(address, bias) {
   return task;
 }
 
+export function reverseGeocode(latitude, longitude) {
+  const addressKey = `reverse:${Number(latitude).toFixed(5)},${Number(longitude).toFixed(5)}`;
+  const cache = localStore.getGeoCache();
+  if (cache[addressKey]) return Promise.resolve({ ...cache[addressKey], cached: true });
+  const task = nominatimQueue.then(async () => {
+    if (!navigator.onLine) throw new Error("OFFLINE");
+    const sinceLast = Date.now() - nominatimLastRequest;
+    if (sinceLast < 1000) await wait(1000 - sinceLast);
+    nominatimLastRequest = Date.now();
+    const params = new URLSearchParams({ lat: String(latitude), lon: String(longitude), format: "jsonv2", addressdetails: "1", zoom: "18", "accept-language": "pt-BR" });
+    const response = await fetchWithTimeout(`https://nominatim.openstreetmap.org/reverse?${params.toString()}`, { headers: { Accept: "application/json" } }, 10000);
+    if (!response.ok) throw new Error(`Nominatim HTTP ${response.status}`);
+    const item = await response.json();
+    const details = item.address || {};
+    const street = clean(details.road || details.pedestrian || details.residential || details.footway || details.amenity);
+    const number = clean(details.house_number);
+    const neighborhood = clean(details.suburb || details.neighbourhood || details.city_district);
+    const city = clean(details.city || details.town || details.municipality || details.village);
+    const state = clean(details.state);
+    const postcode = clean(details.postcode);
+    const label = joinPresent([street, number], ", ") || "Local marcado no mapa";
+    const detail = joinPresent([neighborhood, joinPresent([city, state], " - "), postcode], " · ");
+    const result = { address: joinPresent([label, detail], " — "), label, detail, street, number, latitude: +latitude, longitude: +longitude, neighborhood: neighborhood || null, city: city || null, state: state || null, postcode: postcode || null };
+    cache[addressKey] = result; localStore.saveGeoCache(cache); return result;
+  });
+  nominatimQueue = task.catch(() => undefined);
+  return task;
+}
+
 export class AddressAutocomplete {
   constructor({ input, list, getBias, onSelect, debounceMs = 400 }) {
     this.input = typeof input === "string" ? document.querySelector(input) : input;
@@ -234,24 +263,31 @@ export function getCurrentLocation() {
   });
 }
 
-export function createMap(elementId) {
+export function createMap(elementId, options = {}) {
   if (!window.L) return null;
   const element = document.getElementById(elementId);
   if (!element) return null;
-  const map = L.map(elementId, { zoomControl: true, scrollWheelZoom: false }).setView([DEFAULT_START.lat, DEFAULT_START.lon], 12);
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, attribution: "&copy; OpenStreetMap" }).addTo(map);
+  const map = L.map(elementId, { zoomControl: options.zoomControl ?? false, scrollWheelZoom: options.scrollWheelZoom ?? false }).setView([DEFAULT_START.lat, DEFAULT_START.lon], 12);
+  map._luvitLayers = {
+    light: L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, attribution: "&copy; OpenStreetMap" }),
+    dark: L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", { maxZoom: 19, attribution: "&copy; OpenStreetMap &copy; CARTO" })
+  };
+  map._luvitLayerName = "light"; map._luvitLayers.light.addTo(map);
   return map;
 }
 
-export function drawRoute(map, start, stops, geometry) {
+export function toggleMapLayer(map) { if (!map?._luvitLayers) return; map.removeLayer(map._luvitLayers[map._luvitLayerName]); map._luvitLayerName = map._luvitLayerName === "light" ? "dark" : "light"; map._luvitLayers[map._luvitLayerName].addTo(map); }
+
+export function drawRoute(map, start, stops, geometry, options = {}) {
   if (!map) return;
   map.eachLayer(layer => { if (!(layer instanceof L.TileLayer)) map.removeLayer(layer); });
   const coordinates = [];
-  if (start) { coordinates.push([start.lat, start.lon]); L.circleMarker([start.lat, start.lon], { radius: 7, color: "#111827", fillOpacity: 1 }).bindTooltip("Início").addTo(map); }
-  stops.filter(stop => stop.latitude != null).forEach((stop, index) => { coordinates.push([stop.latitude, stop.longitude]); L.circleMarker([stop.latitude, stop.longitude], { radius: 8, color: "#fff", weight: 3, fillColor: "#ff5c00", fillOpacity: 1 }).bindTooltip(`${index + 1}. ${stop.address}`).addTo(map); });
-  if (geometry?.coordinates) L.geoJSON(geometry, { style: { color: "#ff5c00", weight: 5, opacity: .85 } }).addTo(map);
+  if (start) { coordinates.push([start.lat, start.lon]); L.marker([start.lat, start.lon], { icon: L.divIcon({ className: "", html: '<span class="start-marker" aria-label="Ponto inicial">S</span>', iconSize: [30, 30], iconAnchor: [15, 15] }) }).bindTooltip("Ponto inicial").addTo(map); }
+  stops.filter(stop => stop.latitude != null).forEach((stop, index) => { coordinates.push([stop.latitude, stop.longitude]); const selected = stop.id === options.selectedStopId, active = stop.status === "active"; const marker = L.marker([stop.latitude, stop.longitude], { icon: L.divIcon({ className: "", html: `<span class="number-marker${selected ? " selected" : ""}${active ? " active" : ""}" aria-label="Parada ${index + 1}">${index + 1}</span>`, iconSize: [28, 28], iconAnchor: [14, 14] }), keyboard: true, title: `Parada ${index + 1}: ${stop.address}` }).bindTooltip(`${index + 1}. ${stop.address}`).addTo(map); marker.on("click", () => options.onSelectStop?.(stop.id)); });
+  if (options.temporaryPoint) { coordinates.push([options.temporaryPoint.latitude, options.temporaryPoint.longitude]); L.marker([options.temporaryPoint.latitude, options.temporaryPoint.longitude], { icon: L.divIcon({ className: "", html: '<span class="start-marker temporary-marker">+</span>', iconSize: [30, 30], iconAnchor: [15, 15] }) }).addTo(map); }
+  if (geometry?.coordinates) L.geoJSON(geometry, { style: { color: "#f45b0b", weight: 5, opacity: .9 } }).addTo(map);
   else if (coordinates.length > 1) L.polyline(coordinates, { color: "#ff5c00", weight: 4, dashArray: "8 8" }).addTo(map);
-  if (coordinates.length) map.fitBounds(coordinates, { padding: [35, 35], maxZoom: 15 });
+  if (coordinates.length && options.fit !== false) map.fitBounds(coordinates, { padding: [35, 35], maxZoom: 15 });
   window.setTimeout(() => map.invalidateSize(), 80);
 }
 

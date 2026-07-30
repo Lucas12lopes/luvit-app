@@ -15,8 +15,9 @@ Abrir arquivos diretamente com `file://` não é suficiente para módulos ES, se
 ## Configurar Supabase
 
 1. Execute integralmente [`supabase/schema.sql`](supabase/schema.sql) no SQL Editor do Supabase.
-2. Configure as URLs de autenticação conforme [`supabase/README.md`](supabase/README.md).
-3. Edite [`js/config.js`](js/config.js) com a Project URL e a chave pública `anon`/`publishable`:
+2. Em projetos já existentes, execute depois [`supabase/migrations/002_luvit_professional_ui.sql`](supabase/migrations/002_luvit_professional_ui.sql).
+3. Configure as URLs de autenticação conforme [`supabase/README.md`](supabase/README.md).
+4. Edite [`js/config.js`](js/config.js) com a Project URL e a chave pública `anon`/`publishable`:
 
 ```js
 window.LUVIT_CONFIG = {
@@ -45,5 +46,8 @@ Depois do primeiro deploy, substitua `https://seu-dominio.com` em `js/config.js`
 - `js/storage.js`: persistência local, cache e fila de sincronização
 - `js/maps.js`: geocodificação, geolocalização e Leaflet
 - `js/routes.js`: OSRM e fallback local
+- `js/state/app-state.js`: fonte única de verdade da aplicação
+- `js/components/icons.js`: conjunto de ícones SVG do painel
+- `js/utils/format.js`: formatação operacional compartilhada
 - `supabase/schema.sql`: tabelas, índices, triggers e RLS
 - `backup-original/`: cópia não referenciada da versão anterior
