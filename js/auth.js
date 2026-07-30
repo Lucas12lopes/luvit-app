@@ -1,6 +1,6 @@
 import { getSupabase, isSupabaseConfigured } from "./supabase-client.js";
 import { qs, setLoading } from "./ui.js";
-const messages = { "Invalid login credentials": "E-mail ou senha incorretos.", "Email not confirmed": "Confirme seu e-mail antes de entrar.", "User already registered": "Já existe uma conta com este e-mail.", "Password should be at least 6 characters": "A senha precisa ter pelo menos 6 caracteres." };
+const messages = { "Invalid login credentials": "E-mail ou senha incorretos.", "Email not confirmed": "Confirme seu e-mail antes de entrar.", "User already registered": "Já existe uma conta com este e-mail.", "Password should be at least 6 characters": "A senha precisa ter pelo menos 6 caracteres.", "Invalid API key": "A chave pública do Supabase é inválida. Atualize js/config.js com a chave anon ou publishable do projeto." };
 const message = (text, type = "error") => { const box = qs("#auth-message"); box.textContent = text; box.className = `auth-message show ${type}`; };
 const supabase = getSupabase();
 if (!isSupabaseConfigured()) qs("#config-note")?.classList.remove("sr-only");
@@ -8,7 +8,7 @@ qs("[data-password-toggle]")?.addEventListener("click", event => { const input =
 const form = qs("#auth-form");
 form?.addEventListener("submit", async event => {
   event.preventDefault(); if (form.dataset.submitting === "true") return;
-  if (!supabase) { message("Configure a URL e a chave pública do Supabase em js/config.js. Enquanto isso, você pode acessar o modo local pela página de login."); return; }
+  if (!supabase) { message("A chave pública do Supabase ainda não foi configurada. Abra js/config.js e substitua SUA_CHAVE_PUBLICA_ATUAL pela chave anon ou publishable do projeto."); return; }
   form.dataset.submitting = "true"; const button = qs("button[type=submit]", form); setLoading(button, true);
   try {
     const action = form.dataset.action, email = qs("#email")?.value.trim(), password = qs("#password")?.value, name = qs("#name")?.value.trim(); let result;
@@ -18,7 +18,7 @@ form?.addEventListener("submit", async event => {
     if (result.error) throw result.error;
     if (action === "login") location.replace(new URLSearchParams(location.search).get("next") || "/app/");
     else message(action === "signup" ? "Cadastro realizado. Verifique seu e-mail para confirmar a conta." : "Enviamos as instruções de recuperação para seu e-mail.", "success");
-  } catch (error) { message(messages[error.message] || "Não foi possível concluir. Verifique os dados e tente novamente."); }
+  } catch (error) { console.error("Falha de autenticação:", error); message(messages[error.message] || error.message || "Não foi possível concluir. Verifique os dados e tente novamente."); }
   finally { form.dataset.submitting = "false"; setLoading(button, false); }
 });
 qs("#local-access")?.addEventListener("click", () => location.assign("/app/"));

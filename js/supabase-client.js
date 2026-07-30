@@ -1,4 +1,7 @@
-const placeholder = value => !value || value.startsWith("COLOQUE_");
+const placeholder = value => {
+  const normalized = String(value || "").trim().toUpperCase();
+  return !normalized || normalized.startsWith("COLOQUE_") || normalized.startsWith("SUA_CHAVE") || normalized.includes("CHAVE_PUBLICA");
+};
 export const isSupabaseConfigured = () => {
   const config = window.LUVIT_CONFIG || {};
   return !placeholder(config.supabaseUrl) && !placeholder(config.supabaseAnonKey) && Boolean(window.supabase?.createClient);
