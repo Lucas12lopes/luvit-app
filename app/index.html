@@ -1,18 +1,99 @@
-<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Painel — Luvit</title><meta name="description" content="Organize e acompanhe suas entregas no Luvit."><meta name="theme-color" content="#111111"><link rel="manifest" href="/manifest.json"><link rel="icon" href="/assets/icons/favicon-32.png"><link rel="apple-touch-icon" href="/assets/icons/apple-touch-icon.png"><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin><link rel="stylesheet" href="/css/global.css"><link rel="stylesheet" href="/css/app.css"></head><body class="app-body"><a class="skip-link" href="#app-main">Pular para o conteúdo</a><div class="app-shell">
-  <aside class="sidebar" aria-label="Menu lateral"><a class="brand brand-light" href="/">LUV<span>IT</span></a><nav aria-label="Navegação do painel"><button type="button" class="nav-item active" data-view="deliveries"><span aria-hidden="true">⌖</span>Rota atual</button><button type="button" class="nav-item" data-view="favorites"><span aria-hidden="true">☆</span>Favoritos</button><button type="button" class="nav-item" data-view="history"><span aria-hidden="true">↺</span>Histórico</button></nav><div class="sidebar-bottom"><span id="connection-status" class="connection-status">Verificando conexão…</span><a href="/">Site Luvit</a><button id="logout-button" type="button">Sair</button></div></aside>
-  <div class="app-content"><header class="app-header"><div><p id="greeting">Olá!</p><h1>Organize suas entregas</h1></div><button id="location-button" class="location-button" type="button" title="Definir ponto inicial"><span aria-hidden="true">◎</span><span id="location-label">Definir ponto inicial</span></button></header>
-    <main id="app-main"><div id="config-banner" class="config-banner" hidden><strong>Modo local ativo.</strong> Configure o Supabase em <code>js/config.js</code> para autenticação e sincronização. Seus dados continuam salvos neste dispositivo.</div>
-      <section class="stats-grid" aria-label="Resumo da rota"><article><span>Entregas</span><strong id="delivery-count">0</strong><small id="completed-count">0 concluídas</small></article><article><span>Distância estimada</span><strong id="route-distance">—</strong><small>Sequência atual</small></article><article><span>Status</span><strong id="route-status">Planejando</strong><small id="sync-status">Salvo localmente</small></article></section>
-      <div class="workspace"><section class="panel delivery-panel" id="deliveries-view"><div class="panel-head"><div><h2>Paradas</h2><p>Adicione os destinos e organize a sequência.</p></div><div class="panel-actions"><button id="clear-button" class="text-button danger" type="button">Limpar</button><button id="optimize-button" class="button button-primary" type="button">Otimizar rota</button></div></div>
-        <form id="delivery-form" class="address-form"><div class="field autocomplete"><label for="address-input">Endereço da entrega</label><div class="input-action"><input id="address-input" type="text" autocomplete="off" placeholder="Rua, número, cidade" required><button class="button button-primary" type="submit">Adicionar</button></div><div id="suggestions" class="suggestions" hidden></div></div></form><div id="unresolved-list" class="unresolved" hidden></div>
-        <div id="delivery-list" class="delivery-list" aria-live="polite"></div>
-      </section>
-      <aside class="route-side" aria-label="Mapa e atalhos"><section class="panel map-panel"><div class="panel-head"><div><h2>Visão da rota</h2><p id="map-caption">Adicione entregas para visualizar.</p></div><button id="expand-map" class="icon-button" type="button" aria-label="Ampliar mapa">⛶</button></div><section id="route-map" aria-label="Mapa da rota"></section></section><section class="panel shortcuts"><h2>Atalhos</h2><button id="start-route-button" class="button button-primary" type="button">Iniciar rota</button><button id="use-location-button" class="button button-secondary" type="button">Usar minha localização</button><button id="manual-start-button" class="button button-secondary" type="button">Escolher ponto inicial</button></section></aside></div>
-      <section class="panel secondary-view" id="favorites-view" hidden><div class="panel-head"><div><h2>Endereços favoritos</h2><p>Destinos salvos para reutilizar rapidamente.</p></div></div><div id="favorites-list" class="card-list"></div></section>
-      <section class="panel secondary-view" id="history-view" hidden><div class="panel-head"><div><h2>Histórico de rotas</h2><p>Jornadas finalizadas neste dispositivo ou sincronizadas.</p></div></div><div id="history-list" class="card-list"></div></section>
-    </main></div></div>
-  <nav class="mobile-nav" aria-label="Navegação móvel"><button type="button" class="active" data-view="deliveries"><span>⌖</span>Rota</button><button type="button" data-view="favorites"><span>☆</span>Favoritos</button><button type="button" data-view="history"><span>↺</span>Histórico</button></nav>
-  <dialog id="navigation-dialog" class="navigation-dialog"><div class="dialog-head"><div><small>Rota em andamento</small><h2 id="navigation-progress">Parada 1 de 1</h2></div><button id="close-navigation" class="icon-button" type="button" aria-label="Fechar navegação">×</button></div><div id="navigation-map"></div><section class="current-stop"><small>Parada atual</small><h3 id="current-address">Carregando parada</h3><p id="next-address"></p><div class="progress"><span id="progress-bar"></span></div></section><div class="navigation-links"><button id="open-waze" class="button button-secondary" type="button">Abrir no Waze</button><button id="open-maps" class="button button-secondary" type="button">Google Maps</button></div><div class="navigation-actions"><button id="previous-stop" class="button button-secondary" type="button">Voltar</button><button id="skip-stop" class="button button-secondary" type="button">Pular</button><button id="complete-stop" class="button complete-button" type="button">Concluir parada</button></div><button id="finish-route" class="text-button danger" type="button">Finalizar rota</button></dialog>
-  <dialog id="edit-dialog" class="small-dialog"><form id="edit-form"><div class="dialog-head"><h2>Editar entrega</h2><button class="icon-button" type="submit" value="cancel" formmethod="dialog" aria-label="Fechar">×</button></div><div class="field"><label for="edit-address">Endereço</label><input id="edit-address" type="text" required></div><div class="field"><label for="edit-notes">Observações</label><textarea id="edit-notes" rows="3"></textarea></div><div class="dialog-actions"><button class="button button-secondary" type="submit" value="cancel" formmethod="dialog">Cancelar</button><button class="button button-primary" type="submit">Salvar</button></div></form></dialog>
-  <dialog id="start-dialog" class="small-dialog"><form id="start-form"><div class="dialog-head"><h2>Ponto inicial</h2><button class="icon-button" type="submit" value="cancel" formmethod="dialog" aria-label="Fechar">×</button></div><p>Digite um endereço para definir de onde a rota deve começar.</p><div class="field"><label for="start-address">Endereço inicial</label><input id="start-address" type="text" placeholder="Rua, número, cidade" required></div><div class="dialog-actions"><button class="button button-secondary" type="submit" value="cancel" formmethod="dialog">Cancelar</button><button class="button button-primary" type="submit">Definir ponto</button></div></form></dialog>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin></script><script src="/js/config.js"></script><script type="module" src="/js/app.js"></script></body></html>
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>Painel — Luvit</title>
+  <meta name="description" content="Organize e acompanhe suas entregas no Luvit.">
+  <meta name="theme-color" content="#111111">
+  <link rel="manifest" href="/manifest.json">
+  <link rel="icon" href="/assets/icons/favicon-32.png">
+  <link rel="apple-touch-icon" href="/assets/icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin>
+  <link rel="stylesheet" href="/css/global.css">
+  <link rel="stylesheet" href="/css/app.css">
+</head>
+<body class="app-body">
+  <a class="skip-link" href="#app-main">Pular para o conteúdo</a>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Menu lateral">
+      <a class="brand brand-light" href="/">LUV<span>IT</span></a>
+      <nav aria-label="Navegação do painel">
+        <button class="nav-item active" type="button" data-view="deliveries"><span aria-hidden="true">⌖</span>Rota atual</button>
+        <button class="nav-item" type="button" data-view="favorites"><span aria-hidden="true">☆</span>Favoritos</button>
+        <button class="nav-item" type="button" data-view="history"><span aria-hidden="true">↺</span>Histórico</button>
+      </nav>
+      <div class="sidebar-bottom"><span id="connection-status" class="connection-status">Verificando conexão…</span><a href="/">Site Luvit</a><button id="logout-button" type="button">Sair</button></div>
+    </aside>
+    <div class="app-content">
+      <header class="app-header">
+        <div class="header-copy"><p id="greeting">Olá!</p><h1>Organize suas entregas</h1></div>
+        <button id="location-button" class="location-button" type="button" title="Definir ponto inicial"><span aria-hidden="true">◎</span><span id="location-label">Definir ponto inicial</span></button>
+      </header>
+      <main id="app-main">
+        <div id="config-banner" class="config-banner" hidden><strong>Modo local ativo.</strong> Configure o Supabase em <code>js/config.js</code> para autenticação e sincronização. Seus dados continuam salvos neste dispositivo.</div>
+        <section class="stats-grid" aria-label="Resumo da rota">
+          <article><span>Entregas</span><strong id="delivery-count">0</strong><small id="completed-count">0 concluídas</small></article>
+          <article><span>Distância</span><strong id="route-distance">—</strong><small>Sequência atual</small></article>
+          <article><span>Status</span><strong id="route-status">Planejando</strong><small id="sync-status">Salvo localmente</small></article>
+        </section>
+        <div class="workspace">
+          <section class="panel delivery-panel" id="deliveries-view">
+            <div class="panel-head"><div><h2>Paradas</h2><p>Adicione os destinos e organize a sequência.</p></div><div class="panel-actions"><button id="clear-button" class="text-button danger" type="button">Limpar</button><button id="optimize-button" class="button button-primary" type="button">Otimizar rota</button></div></div>
+            <form id="delivery-form" class="address-form">
+              <div class="field autocomplete" data-autocomplete-id="suggestions">
+                <label for="address-input">Endereço da entrega</label>
+                <div class="input-action"><input id="address-input" type="text" autocomplete="off" placeholder="Rua, número e cidade" required><button id="add-address-button" class="button button-primary" type="submit">Adicionar</button></div>
+                <div id="suggestions" class="suggestions" hidden></div>
+              </div>
+            </form>
+            <div id="geocode-progress" class="geocode-progress" role="status" aria-live="polite" hidden></div>
+            <div id="unresolved-list" class="unresolved" hidden></div>
+            <div id="delivery-list" class="delivery-list" aria-live="polite"></div>
+          </section>
+          <aside class="route-side" aria-label="Mapa e atalhos">
+            <section class="panel map-panel">
+              <div class="panel-head"><div><h2>Visão da rota</h2><p id="map-caption">Adicione entregas para visualizar.</p></div><div class="map-head-actions"><button id="toggle-map" class="button button-secondary mobile-map-toggle" type="button" aria-expanded="false">Ver mapa</button><button id="expand-map" class="icon-button desktop-map-expand" type="button" aria-label="Ampliar mapa">⛶</button></div></div>
+              <section id="route-map" aria-label="Mapa da rota"></section>
+            </section>
+            <section class="panel shortcuts"><h2>Atalhos</h2><button id="start-route-button" class="button button-primary" type="button">Iniciar rota</button><button id="use-location-button" class="button button-secondary" type="button">Usar minha localização</button><button id="manual-start-button" class="button button-secondary" type="button">Escolher ponto inicial</button></section>
+          </aside>
+        </div>
+        <section class="panel secondary-view" id="favorites-view" hidden><div class="panel-head"><div><h2>Endereços favoritos</h2><p>Destinos salvos para reutilizar rapidamente.</p></div></div><div id="favorites-list" class="card-list"></div></section>
+        <section class="panel secondary-view" id="history-view" hidden><div class="panel-head"><div><h2>Histórico de rotas</h2><p>Jornadas finalizadas neste dispositivo ou sincronizadas.</p></div></div><div id="history-list" class="card-list"></div></section>
+      </main>
+    </div>
+  </div>
+  <div id="mobile-actions" class="mobile-actions"><button id="mobile-optimize-button" class="button button-secondary" type="button">Otimizar</button><button id="mobile-start-button" class="button button-primary" type="button">Iniciar rota</button></div>
+  <nav class="mobile-nav" aria-label="Navegação móvel">
+    <button class="active" type="button" data-view="deliveries"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s6-5.1 6-11a6 6 0 1 0-12 0c0 5.9 6 11 6 11Z"/><circle cx="12" cy="10" r="2"/></svg><span>Rota</span></button>
+    <button type="button" data-view="favorites"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9L12 3Z"/></svg><span>Favoritos</span></button>
+    <button type="button" data-view="history"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.3-5.7L4 8.6M4 4v4.6h4.6M12 7v5l3 2"/></svg><span>Histórico</span></button>
+  </nav>
+  <dialog id="navigation-dialog" class="navigation-dialog">
+    <div class="dialog-head navigation-dialog-head"><div><small>Rota em andamento</small><h2 id="navigation-progress">Parada 1 de 1</h2></div><button id="close-navigation" class="icon-button" type="button" aria-label="Fechar navegação">×</button></div>
+    <div id="navigation-map"></div>
+    <section class="current-stop"><small>Parada atual</small><h3 id="current-address">Carregando parada</h3><p id="next-address"></p><div class="progress"><span id="progress-bar"></span></div></section>
+    <div class="navigation-links"><button id="open-waze" class="button button-secondary" type="button">Abrir no Waze</button><button id="open-maps" class="button button-secondary" type="button">Google Maps</button></div>
+    <div class="navigation-actions"><button id="previous-stop" class="button button-secondary" type="button">Voltar</button><button id="skip-stop" class="button button-secondary" type="button">Pular</button><button id="complete-stop" class="button complete-button" type="button">Concluir parada</button></div>
+    <button id="finish-route" class="text-button danger" type="button">Finalizar rota</button>
+  </dialog>
+  <dialog id="edit-dialog" class="small-dialog">
+    <form id="edit-form"><div class="dialog-head"><h2>Editar entrega</h2><button class="icon-button" type="submit" value="cancel" formmethod="dialog" aria-label="Fechar">×</button></div>
+      <div class="field autocomplete" data-autocomplete-id="edit-suggestions"><label for="edit-address">Endereço</label><input id="edit-address" type="text" autocomplete="off" required><div id="edit-suggestions" class="suggestions" hidden></div></div>
+      <div class="field"><label for="edit-notes">Observações</label><textarea id="edit-notes" rows="3"></textarea></div>
+      <div class="dialog-actions"><button class="button button-secondary" type="submit" value="cancel" formmethod="dialog">Cancelar</button><button id="save-edit-button" class="button button-primary" type="submit">Salvar</button></div>
+    </form>
+  </dialog>
+  <dialog id="start-dialog" class="small-dialog">
+    <form id="start-form"><div class="dialog-head"><h2>Ponto inicial</h2><button class="icon-button" type="submit" value="cancel" formmethod="dialog" aria-label="Fechar">×</button></div><p>Digite um endereço para definir de onde a rota deve começar.</p>
+      <div class="field autocomplete" data-autocomplete-id="start-suggestions"><label for="start-address">Endereço inicial</label><input id="start-address" type="text" autocomplete="off" placeholder="Rua, número e cidade" required><div id="start-suggestions" class="suggestions" hidden></div></div>
+      <div class="dialog-actions"><button class="button button-secondary" type="submit" value="cancel" formmethod="dialog">Cancelar</button><button id="save-start-button" class="button button-primary" type="submit">Definir ponto</button></div>
+    </form>
+  </dialog>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin></script>
+  <script src="/js/config.js"></script>
+  <script type="module" src="/js/app.js"></script>
+</body>
+</html>

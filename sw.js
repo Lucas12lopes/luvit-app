@@ -1,4 +1,4 @@
-const VERSION = "luvit-v3-20260730";
+const VERSION = "luvit-v4-address-mobile";
 const STATIC_CACHE = `${VERSION}-static`;
 const PAGE_CACHE = `${VERSION}-pages`;
 const LOCAL_ASSETS = ["/", "/index.html", "/login.html", "/cadastro.html", "/recuperar-senha.html", "/app/", "/app/index.html", "/manifest.json", "/css/global.css", "/css/landing.css", "/css/auth.css", "/css/app.css", "/js/config.js", "/js/ui.js", "/js/landing.js", "/js/supabase-client.js", "/js/auth.js", "/js/app.js", "/js/maps.js", "/js/routes.js", "/js/storage.js", "/assets/icons/favicon-32.png", "/assets/icons/apple-touch-icon.png", "/assets/icons/icon-192x192.png", "/assets/icons/icon-512x512.png"];
