@@ -1,6 +1,7 @@
 import { requireAuth, getSupabase, isSupabaseConfigured } from "./supabase-client.js";
 import { localStore, persistDeliveries, persistFavorites, removeRemote, loadRemote, syncQueue, migrateLegacyFavorites, saveFinishedRoute, normalize } from "./storage.js";
-import { AddressAutocomplete, geocode, reverseGeocode, getCurrentLocation, createMap, drawRoute, toggleMapLayer, DEFAULT_START } from "./maps.js";
+import { AddressAutocomplete, getCurrentLocation, createMap, drawRoute, toggleMapLayer, DEFAULT_START } from "./maps.js";
+import { geocode, reverseGeocode } from "./services/geocoding.js";
 import { optimizeRoute, routeGeometry } from "./routes.js";
 import { qs, qsa, toast, uid, setLoading, openDialog, closeDialog } from "./ui.js";
 import { createAppState, initialUiState } from "./state/app-state.js";
