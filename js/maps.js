@@ -33,6 +33,8 @@ export class AddressAutocomplete {
     this.onSelect?.(null);
     window.clearTimeout(this.timer);
     this.controller?.abort();
+    this.controller = null;
+    this.clearLoading();
     const query = this.input.value.trim();
     if (query.length < 3) { this.results = []; this.close(true); return; }
     if (!navigator.onLine) { this.showState("Você está offline. Digite o endereço completo.", "offline"); return; }
@@ -70,6 +72,13 @@ export class AddressAutocomplete {
       const secondary = document.createElement("small");
       secondary.textContent = result.detail || "Brasil";
       option.append(primary, secondary);
+      if (result.typedNumber && !result.numberMatch) {
+        option.classList.add("number-unconfirmed");
+        const note = document.createElement("em");
+        note.className = "number-unconfirmed-note";
+        note.textContent = `Número ${result.typedNumber} não localizado no mapa`;
+        option.append(note);
+      }
       option.addEventListener("pointerdown", event => event.preventDefault());
       option.addEventListener("click", () => this.select(index));
       this.list.append(option);
@@ -83,6 +92,12 @@ export class AddressAutocomplete {
     item.textContent = text;
     this.list.replaceChildren(item);
     this.open();
+  }
+  clearLoading() {
+    const item = this.list.querySelector(".suggestion-state.loading");
+    if (!item) return;
+    this.list.replaceChildren();
+    this.close();
   }
   select(index) {
     const result = this.results[index];
