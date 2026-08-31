@@ -47,14 +47,17 @@ export class AddressAutocomplete {
     if (!this.results.length) this.showState("Buscando endereços...", "loading");
     try {
       const results = await searchAddresses(query, this.getBias?.(), { signal: this.controller.signal });
-      if (currentId !== this.requestId || query !== this.input.value.trim()) return;
+      if (currentId !== this.requestId) return;
+      if (query !== this.input.value.trim()) { this.close(true); return; }
       this.results = results;
       this.activeIndex = -1;
       if (!results.length) this.showState("Nenhum endereço encontrado. Inclua rua, número e cidade.", "empty");
       else this.renderResults();
     } catch (error) {
-      if (error.name === "AbortError" || currentId !== this.requestId) return;
+      if (error.name === "AbortError") { if (currentId === this.requestId) this.clearLoading(); return; }
+      if (currentId !== this.requestId) return;
       console.error("[Luvit autocomplete]", error);
+      this.clearLoading();
       if (!this.results.length) this.showState(error.message === "OFFLINE" ? "Você está offline. Digite o endereço completo." : "Não foi possível consultar endereços agora. Tente novamente.", "error");
     }
   }
@@ -102,9 +105,16 @@ export class AddressAutocomplete {
   select(index) {
     const result = this.results[index];
     if (!result) return;
+    window.clearTimeout(this.timer);
+    this.timer = null;
+    this.controller?.abort();
+    this.controller = null;
+    this.requestId += 1;
+    this.results = [];
+    this.activeIndex = -1;
     this.selected = result;
     this.input.value = result.address;
-    this.close();
+    this.close(true);
     this.onSelect?.(result);
     this.input.dispatchEvent(new CustomEvent("luvit:address-selected", { detail: result }));
   }
