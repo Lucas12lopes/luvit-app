@@ -15,6 +15,8 @@ export class AddressAutocomplete {
     this.requestId = 0;
     this.controller = null;
     this.timer = null;
+    this._suppressInputUntil = 0;
+    this.programmaticInputWindowMs = 400;
     this.bind();
   }
   bind() {
@@ -23,7 +25,7 @@ export class AddressAutocomplete {
     this.input.setAttribute("aria-controls", this.list.id);
     this.input.setAttribute("aria-expanded", "false");
     this.list.setAttribute("role", "listbox");
-    this.input.addEventListener("input", () => this.schedule());
+    this.input.addEventListener("input", () => { if (Date.now() < this._suppressInputUntil) return; this.schedule(); });
     this.input.addEventListener("keydown", event => this.onKeydown(event));
     this.input.addEventListener("focus", () => { if (this.results.length) this.open(); });
     document.addEventListener("pointerdown", event => { if (!event.target.closest(`[data-autocomplete-id="${this.list.id}"]`)) this.close(); });
@@ -113,6 +115,7 @@ export class AddressAutocomplete {
     this.results = [];
     this.activeIndex = -1;
     this.selected = result;
+    this.suppressProgrammaticInput();
     this.input.value = result.address;
     this.close(true);
     this.onSelect?.(result);
@@ -147,7 +150,8 @@ export class AddressAutocomplete {
   open() { this.list.hidden = false; this.input.setAttribute("aria-expanded", "true"); }
   close(clear = false) { this.list.hidden = true; this.input.setAttribute("aria-expanded", "false"); this.input.removeAttribute("aria-activedescendant"); this.activeIndex = -1; if (clear) this.list.replaceChildren(); }
   getSelected() { return this.selected; }
-  setSelected(value) { this.selected = value; }
+  setSelected(value) { this.selected = value; if (value) this.suppressProgrammaticInput(); }
+  suppressProgrammaticInput() { this._suppressInputUntil = Date.now() + this.programmaticInputWindowMs; }
   destroy() { window.clearTimeout(this.timer); this.controller?.abort(); }
 }
 
